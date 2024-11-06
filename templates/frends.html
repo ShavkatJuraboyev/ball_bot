@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hamster Kombat</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #000;
+    color: #fff;
+}
+
+.container {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.back-button {
+    font-size: 20px;
+    color: #fff;
+    text-decoration: none;
+}
+
+h1 {
+    font-size: 20px;
+    flex: 1;
+    text-align: center;
+}
+
+.main-content {
+    text-align: center;
+}
+
+.crystal-icon img {
+    width: 100px;
+    margin: 20px 0;
+}
+
+h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.task-section {
+    margin: 20px 0;
+}
+
+.task-section h3 {
+    font-size: 16px;
+    margin-bottom: 10px;
+    text-align: left;
+}
+
+.task-item {
+    display: flex;
+    align-items: center;
+    background-color: #333;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+}
+
+.task-item img {
+    width: 25px;
+    height: 25px;
+    margin-right: 10px;
+}
+
+.task-item span {
+    flex: 1;
+    font-size: 14px;
+}
+
+.reward {
+    color: #00f;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    max-width: 600px;
+    background-color: #333;
+    padding: 10px 0;
+}
+
+footer nav {
+    display: flex;
+    justify-content: space-around;
+}
+
+footer nav a {
+    color: #ccc;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+footer nav a.active {
+    color: #fff;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="#" class="back-button">&#8592;</a>
+            <h1>Hamster Kombat</h1>
+        </header>
+        <div class="main-content">
+            <div class="crystal-icon">
+                <img src="crystal.png" alt="Crystal Icon">
+            </div>
+            <h2>Ko‘proq kristallar toping</h2>
+
+            <section class="task-section">
+                <h3>Hamster YouTube</h3>
+                <div class="task-item">
+                    <img src="youtube-icon.png" alt="YouTube Icon">
+                    <span>Mashhurlarning Top 6 NFT Muvaffaqiyatsizliklari</span>
+                    <span class="reward">💎 +1</span>
+                </div>
+                <div class="task-item">
+                    <img src="youtube-icon.png" alt="YouTube Icon">
+                    <span>AQSh saylovlaridagi jinnilik</span>
+                    <span class="reward">💎 +1</span>
+                </div>
+            </section>
+
+            <section class="task-section">
+                <h3>Vazifalar ro'yxati</h3>
+                <div class="task-item">
+                    <img src="telegram-icon.png" alt="Telegram Icon">
+                    <span>TG kanalimizga qo'shiling</span>
+                    <span class="reward">💎 +1</span>
+                </div>
+                <div class="task-item">
+                    <img src="x-icon.png" alt="X Icon">
+                    <span>X hisobimizni kuzatib boring</span>
+                    <span class="reward">💎 +1</span>
+                </div>
+            </section>
+        </div>
+        
+        <footer>
+            <nav>
+                <a href="#">Birja</a>
+                <a href="#">Playground</a>
+                <a href="#">AirDrop</a>
+                <a href="#">Do'stlar</a>
+                <a href="#" class="active">Vazifalar</a>
+            </nav>
+        </footer>
+    </div>
+</body>
+</html>

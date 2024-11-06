@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hamster Kombat</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Umumiy stil */
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #0d0d24, #1c1c3c);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Yuqori panel */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+            background-color: #222;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .top-bar h1 {
+            font-size: 1.2em;
+            margin: 0;
+            color: #fff;
+            text-align: center;
+            flex-grow: 1;
+        }
+
+        /* Profil ma'lumotlari */
+        .profile-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background-color: #333;
+            border-radius: 10px;
+            margin: 15px;
+        }
+
+        .profile-info img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+        }
+
+        .profile-info .username {
+            font-size: 1em;
+            font-weight: bold;
+        }
+
+        .profile-info .status {
+            font-size: 0.9em;
+            color: #aaaaaa;
+        }
+
+        .profile-stats {
+            display: flex;
+            align-items: center;
+            margin-left: auto;
+            gap: 15px;
+            color: #ffae42;
+        }
+
+        /* Asosiy rasm va matn */
+        .main-content {
+            text-align: center;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .main-content .character {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            margin-top: 10px;
+            border: 4px solid #555;
+        }
+
+        .stat-container {
+            display: flex;
+            justify-content: space-between;
+            background-color: #333;
+            padding: 10px;
+            margin: 15px;
+            border-radius: 10px;
+        }
+
+        .stat-container div {
+            text-align: center;
+            font-size: 1em;
+            color: #ffae42;
+        }
+
+        .stat-container div span {
+            display: block;
+            font-size: 0.9em;
+            color: #999;
+        }
+
+        /* O'yinlar ro'yxati */
+        .game-list {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px;
+            background-color: #222;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .game-item {
+            text-align: center;
+            font-size: 0.9em;
+            color: #fff;
+        }
+
+        .game-item img {
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+        }
+
+        .game-item span {
+            display: block;
+            font-size: 0.8em;
+            color: #ccc;
+            margin-top: 5px;
+        }
+
+        /* Pastki navigatsiya */
+        .bottom-nav {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            background-color: #222;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+
+        .bottom-nav a {
+            color: #888;
+            text-align: center;
+            text-decoration: none;
+            font-size: 0.8em;
+        }
+
+        .bottom-nav a i {
+            font-size: 1.5em;
+        }
+
+        .bottom-nav a.active {
+            color: #ffae42;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Yuqori panel -->
+    <div class="top-bar">
+        <i class="fas fa-arrow-left"></i>
+        <h1>Kiber xavfsizlik</h1>
+    </div>
+
+    <!-- Profil ma'lumotlari -->
+    <div class="profile-info">
+        <img src="../static/images/2018-11-30-03-main.png" alt="Profil">
+        <div>
+            <div class="username">Shavkat Jo'raboyev</div>
+            <div class="status">CEO</div>
+        </div>
+        <div class="profile-stats">
+            <i class="fas fa-gem"></i> <span>102002</span>
+            <i class="fas fa-cog"></i>
+        </div>
+    </div>
+
+    <!-- Asosiy rasm va statik matn -->
+    <div class="main-content">
+        <h2>Bugungi yangi o'yinlar</h2>
+        <div class="game-list">
+            <div class="game-item">
+                <img src="../static/images/2018-11-30-03-main.png" alt="Game">
+                <span>Merge Away</span>
+                <button><i class="fas fa-gem"></i> x3</button>
+            </div>
+            <div class="game-item">
+                <img src="../static/images/Diqqat2.png" alt="Game">
+                <span>Count Masters</span>
+                <button><i class="fas fa-gem"></i> x3</button>
+            </div>
+            <div class="game-item">
+                <img src="../static/images/suniy.png" alt="Game">
+                <span>Train Miner</span>
+                <button><i class="fas fa-gem"></i> x3</button>
+            </div>
+        </div>
+        <div>
+            <img src="https://via.placeholder.com/140" class="character" alt="Hamster">
+            <div><i class="fas fa-gem"></i> 0</div>
+        </div>
+    </div>
+
+    <!-- Pastki navigatsiya -->
+    <div class="bottom-nav">
+        <a href="#" class="active"><i class="fas fa-store"></i><br>Birja</a>
+        <a href="#"><i class="fas fa-gamepad"></i><br>Playground</a>
+        <a href="#"><i class="fas fa-coins"></i><br>AirDrop</a>
+        <a href="#"><i class="fas fa-users"></i><br>Do'stlar</a>
+        <a href="#"><i class="fas fa-tasks"></i><br>Vazifalar</a>
+    </div>
+
+</body>
+</html>
