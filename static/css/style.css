@@ -84,8 +84,8 @@ body {
 }
 
 .friends-info .friends {
-    font-size: 1em;
-    font-weight: bold;
+    font-size: 0.8em;
+    font-weight: 200;
     padding-bottom: 8px;
 }
 .friends-info .olmas{
@@ -140,7 +140,10 @@ body {
     color: #ccc;
     margin-top: 5px;
 }
-
+.game-item a{
+    color: #fff;
+    text-decoration: none;
+}
 /* Markaziy rasm va matn */
 .main-content {
     text-align: center;
@@ -172,6 +175,9 @@ body {
 .share-links{
     margin-bottom: 15px;
 }
+.oxiri a:last-child{
+    margin-bottom: 50px;
+}
 .logo-share {
     display: flex;
     align-items: center;
@@ -201,13 +207,13 @@ body {
 .logo-share .olmas{
     font-size: medium;
     font-style: normal;
-    font-size: 25px;
+    font-size: 17px;
 }
 .logo-share .priz{
     color: #fff;
 }
 .share-links .logo-share .links{
-    margin-left: 70px;
+    margin-left: 40px;
 }
 .share-links .logo-share .links i{
     font-size: x-large;

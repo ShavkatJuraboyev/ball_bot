@@ -3,14 +3,14 @@
 {% block content %}
     <!-- Markaziy kontent -->
     <div class="main-content">
-        <img src="{% static 'images/gif_logo.gif' %}" alt="logo">
+        <img src="{% static 'images/security.png' %}" alt="logo">
         <h2>Buni epladik!</h2>
     </div>
 
     <!-- Token va Withdrawal tugmachalari -->
     <div class="tab-buttons">
-        <a href="style.html">Tokens</a>
-        <a href="style2.html" class="active">Withdrawal</a>
+        <a href="{% url 'style' %}">Tokens</a>
+        <a href="{% url 'style2' %}" class="active">Withdrawal</a>
     </div>
 
   
