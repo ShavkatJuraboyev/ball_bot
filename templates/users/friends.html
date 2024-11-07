@@ -1,0 +1,33 @@
+{% extends 'users/base.html' %}
+{% load static %}
+{% block content %}
+    <div class="main-content">
+        <img src="{% static 'images/gif_logo.gif' %}" alt="logo">
+        <h2>Do'stlarni taklif qilish</h2>
+        <p>Lorem ipsum, dolor sit amet consectetur adipisicing elit. </p>
+    </div>
+    <div class="friends-info">
+        <img src="../static/images/sovga.png" alt="friends">
+        <div>
+            <div class="friends">Shavkat Jo'raboyev</div>
+            <span class="olmas">💎</span> <span class="priz">+2</span>  <span> Lorem, ipsum dolor sit amet</span>
+        </div>
+    </div>
+    
+    <div class="friends-info">
+        <div>
+             <span> Siz allaqachon taklif qilingansiz</span>
+        </div>
+    </div>
+    <div class="list">
+        <p>Siz taklif qilgan do'stlar</p>
+        <i class="fa-sharp-duotone fa-solid fa-arrows-rotate"></i>
+    </div>
+    <div class="friends-info">
+        <img src="../static/images/person.png" alt="friends">
+        <div>
+            <div class="friends">Shavkat Jo'raboyev</div>
+            <span class="olmas">💎</span> <span class="priz">+6</span>  <span> Lorem, ipsum dolor sit amet</span>
+        </div>
+    </div>
+{% endblock content %}

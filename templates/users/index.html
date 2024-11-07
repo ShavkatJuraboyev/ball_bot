@@ -1,0 +1,50 @@
+{% extends 'users/base.html' %}
+{% load static %}
+{% block content %}
+<!-- Profil ma'lumotlari -->
+<div class="profile-info">
+    <img src="{% static 'images/2018-11-30-03-main.png' %}" alt="Profil">
+    <div>
+        <div class="username">Shavkat Jo'raboyev</div>
+        <div class="status">CEO</div>
+    </div>
+    <div class="profile-stats">
+        <span>💎 20000</span>
+        <i class="fas fa-cog"></i>
+    </div>
+</div>
+
+<!-- Asosiy rasm va statik matn -->
+<div class="main-content-color">
+    <h2>Siz bajargan missiyalar</h2>
+    <div class="game-list">
+        <div class="game-item">
+            <img src="{% static 'images/2018-11-30-03-main.png' %}" alt="Game">
+            <span>Merge Away</span>
+            <button><i class="fas fa-gem"></i> x3</button>
+        </div>
+        <div class="game-item">
+            <img src="{% static 'images/Diqqat2.png' %}" alt="Game">
+            <span>Count Masters</span>
+            <button><i class="fas fa-gem"></i> x3</button>
+        </div>
+        <div class="game-item">
+            <img src="{% static 'images/suniy.png' %}" alt="Game">
+            <span>Train Miner</span>
+            <button><i class="fas fa-gem"></i> x3</button>
+        </div>
+    </div>
+    <div>
+        <img src="{% static 'images/sovga.png' %}" class="character" alt="Hamster">
+        <div><i class="fas fa-gem"></i> 0</div>
+    </div>
+</div>
+
+{% endblock content %}
+
+ 
+ 
+    
+
+
+

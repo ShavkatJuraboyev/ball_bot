@@ -1,0 +1,26 @@
+{% extends 'users/base.html' %}
+{% load static %}
+{% block content %}
+    <!-- Markaziy kontent -->
+    <div class="main-content">
+        <img src="{% static 'images/gif_logo.gif' %}" alt="logo">
+        <h2>Buni epladik!</h2>
+    </div>
+
+    <!-- Token va Withdrawal tugmachalari -->
+    <div class="tab-buttons">
+        <a href="style.html">Tokens</a>
+        <a href="style2.html" class="active">Withdrawal</a>
+    </div>
+
+  
+    <div class="stats">
+        <a href="#"><span>Direct claim</span><i class="fa-solid fa-chevron-right"></i></a>
+    </div>
+    <div class="stats">
+        <a href="#"><span>Direct claim</span><i class="fa-solid fa-chevron-right"></i></a>
+    </div>
+    <div class="stats">
+        <a href="#"><span>Direct claim</span><i class="fa-solid fa-chevron-right"></i></a>
+    </div>
+    {% endblock content %}
