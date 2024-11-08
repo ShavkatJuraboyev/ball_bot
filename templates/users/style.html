@@ -11,16 +11,35 @@
 
     <!-- Token va Withdrawal tugmachalari -->
     <div class="tab-buttons">
-        <a href="{% url 'style' %}" class="active">Olmoslar</a>
-        <a href="{% url 'style2' %}">Withdrawal</a>
+        <a href="{% url 'style' %}" class="active">Yulduzlar</a>
+        <a href="#" onclick="showNotification()">Yutuqlar</a>
     </div>
 
     <!-- Statistik ma'lumot -->
     <div class="stats">
-        <p><span>You Tube</span><span>💎15</span></p>
-        <p><span>Telegram</span><span>💎20</span></p>
-        <p><span>Do'stlar</span><span>💎50</span></p>
-        <p><span>Jami:</span><span>💎85</span></p>
+        <p><span>You Tube</span><span>⭐️{{ball.youtube_ball}}</span></p>
+        <p><span>Telegram</span><span>⭐️{{ball.telegram_ball}}</span></p>
+        <p><span>Instagram</span><span>⭐️{{ball.instagram_ball}}</span></p>
+        <p><span>Do'stlar</span><span>⭐️ 0</span></p>
+        <p><span>Jami:</span><span>⭐️{{ball.all_ball}}</span></p>
     </div>
+
+
+    <script>
+        function showNotification() {
+            // Bildirishnomalarni qo'llab-quvvatlayotganligini tekshirish
+            if (!("Notification" in window)) {
+                alert("Brauzeringiz bildirishnomalarni qo'llab-quvvatlamaydi.");
+            } else if (Notification.permission === "granted") {
+                new Notification("Tez kunda");
+            } else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        new Notification("Tez kunda");
+                    }
+                });
+            }
+        }
+    </script>
 
     {% endblock content %}

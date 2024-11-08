@@ -22,3 +22,48 @@ class Users(models.Model):
             self.user = user  # User modelini bog'lash
         super().save(*args, **kwargs)
 
+class Link(models.Model):
+    TYPE_CHOICES = (
+        ('youtube', 'YouTube'),
+        ('telegram', 'Telegram'),
+        ('instagram', 'Instagram'),
+    )
+
+    url = models.URLField()
+    link_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    description = models.CharField(max_length=255, blank=True, null=True)
+    ball = models.IntegerField()
+
+    def __str__(self):
+        return self.description or self.url
+
+class Ball(models.Model):
+    user = models.ForeignKey(Users, on_delete=models.CASCADE)
+    youtube_ball = models.BigIntegerField(default=0)
+    telegram_ball = models.BigIntegerField(default=0)
+    instagram_ball = models.BigIntegerField(default=0)
+    all_ball = models.BigIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.user} - {self.all_ball}"
+
+    def add_ball(self, link_type, points):
+        # Link turiga qarab ballarni oshirish
+        if link_type == 'youtube':
+            self.youtube_ball += points
+        elif link_type == 'telegram':
+            self.telegram_ball += points
+        elif link_type == 'instagram':
+            self.instagram_ball += points
+        
+        # Umumiy ballni hisoblash
+        self.all_ball = self.youtube_ball + self.telegram_ball + self.instagram_ball
+        self.save()  # Saqlash
+
+class LinkVisit(models.Model):
+    user = models.ForeignKey(Users, on_delete=models.CASCADE)
+    link = models.ForeignKey(Link, on_delete=models.CASCADE)
+    visited_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user} visited {self.link} at {self.visited_at}"

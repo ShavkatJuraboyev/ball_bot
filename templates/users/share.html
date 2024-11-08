@@ -3,83 +3,80 @@
 {% block content %}
     <div class="main-content">
         <img src="{% static 'images/security.png' %}" alt="logo">
-        <h2>Ko'proq kristallar toping</h2>
+        <h2>{{user.first_name}} ko'proq Yulduzlar toping</h2>
     </div>
     
     <div class="share-links">
         <div class="text">
-            <h3>Youtube darslar</h3>
+            <h3>Youtube kanallar</h3>
         </div>
-        <a href="#" class="logo-share">
+        {% for link in youtube_links %}
+        <a href="{% url 'add_link_ball' link.id user.telegram_id %}" target="_blank" class="logo-share">
             <img src="{% static 'images/Youtube.png' %}" alt="friends">
             <div>
-                <div class="friends">Kiberxavfsizlik darslari </div>
-                <span class="olmas">💎</span> <span class="priz">+2</span>
+                <div class="friends">{{ link.description }}</div>
+                <span class="olmas">⭐️</span> <span class="priz">+{{ link.ball }}</span>
             </div>
             <div class="links">
                 <i class="fa-solid fa-chevron-right"></i>
             </div>
         </a>
-        <a href="#" class="logo-share">
-            <img src="{% static 'images/Youtube.png' %}" alt="friends">
-            <div>
-                <div class="friends">Kiberxavfsizlik darslari</div>
-                <span class="olmas">💎</span> <span class="priz">+2</span>
-            </div>
-            <div class="links">
-                <i class="fa-solid fa-chevron-right"></i>
-            </div>
-        </a>
+        {% empty %}
+        <p class="text">Hech qanday YouTube kanal mavjud emas.</p>
+        {% endfor %}
     </div>
     <div class="share-links">
         <div class="text">
             <h3>Telegram kanallar</h3>
         </div>
-        <a href="#" class="logo-share">
-            <img src="../static/images/telegram (1).png" alt="friends">
+        {% for link in telegram_links %}
+        <a href="{% url 'add_link_ball' link.id user.telegram_id %}" target="_blank" class="logo-share">
+            <img src="{% static 'images/telegram1.png' %}" alt="friends">
             <div>
-                <div class="friends">Kiberxavfsizlik darslari</div>
-                <span class="olmas">💎</span> <span class="priz">+2</span>
+                <div class="friends">{{ link.description }}</div>
+                <span class="olmas">⭐️</span> <span class="priz">+{{ link.ball }}</span>
             </div>
             <div class="links">
                 <i class="fa-solid fa-chevron-right"></i>
             </div>
         </a>
-        <a href="#" class="logo-share">
-            <img src="../static/images/telegram (1).png" alt="friends">
-            <div>
-                <div class="friends">Kiberxavfsizlik darslari</div>
-                <span class="olmas">💎</span> <span class="priz">+2</span>
-            </div>
-            <div class="links">
-                <i class="fa-solid fa-chevron-right"></i>
-            </div>
-        </a>
+        {% empty %}
+        <p class="text">Hech qanday Telegram kanal mavjud emas.</p>
+        {% endfor %}
     </div>
     <div class="share-links oxiri">
+        <div class="text">
+            <h3>Instagram</h3>
+        </div>
+        {% for link in instagram_links %}
+        <a href="{% url 'add_link_ball' link.id user.telegram_id %}" target="_blank" class="logo-share">
+            <img src="{% static 'images/instagram1.png' %}" alt="friends">
+            <div>
+                <div class="friends">{{ link.description }}</div>
+                <span class="olmas">⭐️</span> <span class="priz">+{{ link.ball }}</span>
+            </div>
+            <div class="links">
+                <i class="fa-solid fa-chevron-right"></i>
+            </div>
+        </a>
+        {% empty %}
+        <p class="text">Hech qanday Instagram kanal mavjud emas.</p>
+        {% endfor %}
+    </div>
+    <!-- <div class="share-links oxiri">
         <div class="text">
             <h3>Do'stlarni taklif qilish</h3>
         </div>
         <a href="#" class="logo-share">
             <img src="{% static 'images/person.png' %}" alt="friends">
             <div>
-                <div class="friends">Kiberxavfsizlik darslari</div>
-                <span class="olmas">💎</span> <span class="priz">+2</span>
+                <div class="friends">Do'stlarni taklif qilish</div>
+                <span class="olmas">⭐️</span> <span class="priz">+2</span>
             </div>
             <div class="links">
                 <i class="fa-solid fa-chevron-right"></i>
             </div>
         </a>
-        <a href="#" class="logo-share">
-            <img src="{% static 'images/person.png' %}" alt="friends">
-            <div>
-                <div class="friends">Kiberxavfsizlik darslari</div>
-                <span class="olmas">💎</span> <span class="priz">+2</span>
-            </div>
-            <div class="links">
-                <i class="fa-solid fa-chevron-right"></i>
-            </div>
-        </a>
-    </div>
+    </div> -->
     
     {% endblock content %}

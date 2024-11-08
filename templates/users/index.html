@@ -5,12 +5,12 @@
 <div class="profile-info">
     <img src="{% static 'images/2018-11-30-03-main.png' %}" alt="Profil">
     <div>
-        <div class="username">Shavkat Jo'raboyev</div>
+        <div class="username" id="user-info"></div>
         <div class="status">CEO</div>
     </div>
     <div class="profile-stats">
-        <span>💎 20000</span>
-        <i class="fas fa-cog"></i> 
+        <span>⭐️ {{ball.all_ball}}</span>
+        <a href="#" style="color: rgb(0, 132, 255);"><i class="fas fa-cog"></i> </a>
     </div>
 </div>
 
@@ -18,25 +18,25 @@
 <div class="main-content-color">
     <h2>Siz bajargan missiyalar</h2>
     <div class="game-list">
-        <div class="game-item">
+        <div class="game-item"> 
             <img src="{% static 'images/2018-11-30-03-main.png' %}" alt="Game">
-            <span>Merge Away</span>
-            <a href="#"><i class="fas fa-gem"></i> x3</a>
+            <span>Yashirin so'z</span>
+            <a href="#">⭐️ x3</a>
         </div>
         <div class="game-item">
             <img src="{% static 'images/Diqqat2.png' %}" alt="Game">
-            <span>Count Masters</span>
-            <a href="#"><i class="fas fa-gem"></i> x3</a>
+            <span>Kodni buzush</span>
+            <a href="#">⭐️ x3</a>
         </div>
         <div class="game-item">
             <img src="{% static 'images/suniy.png' %}" alt="Game">
-            <span>Train Miner</span>
-            <a href="#"><i class="fas fa-gem"></i> x3</a>
+            <span>Su'niy intilekt</span>
+            <a href="#">⭐️ x3</a>
         </div>
     </div>
     <div>
         <img src="{% static 'images/sovga.png' %}" class="character" alt="Hamster">
-        <div><i class="fas fa-gem"></i> 0</div>
+        <div>⭐️ {{ball.all_ball}}</div>
     </div>
 </div>
 

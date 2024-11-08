@@ -7,10 +7,33 @@
     <title>{% block title %} Kiber xavfsizlik {% endblock title %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="../static/css/style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
     {% block content %}
     {% endblock content %}
     {% include 'users/footer.html' %}
+
+    <script>
+        Telegram.WebApp.ready();
+
+        const initData = Telegram.WebApp.initData;
+        const initDataUnsafe = Telegram.WebApp.initDataUnsafe;
+
+        // Foydalanuvchini serverga yuborish
+        fetch('/verify-user/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({initData})
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById("user-info").innerText = `${data.first_name} ${data.last_name}`;
+        })
+        .catch(error => console.error('Xatolik:', error));
+    </script>
+    
 </body>
 </html>
