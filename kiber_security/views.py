@@ -7,6 +7,7 @@ from django.http import JsonResponse, HttpResponse
 
 def index(request):
     telegram_id = request.session.get('telegram_id')
+    print(telegram_id)
     ball = None
     if telegram_id:
         try:
@@ -15,7 +16,7 @@ def index(request):
             print("Ball ma'lumotlari topilmadi.")
     else:
         print("Telegram ID sessiyada mavjud emas.")
-    context = {'ball':ball}
+    context = {'ball':ball, 'segment': 'index',}
     return render(request, 'users/index.html', context)
 
 def get_referral_link(user):
@@ -28,9 +29,10 @@ def friends(request):
     user = Users.objects.filter(telegram_id=telegram_id).first()
 
     referral_link = get_referral_link(user) if user else None 
-    referrals = user.referrals.all() if user else []
+    referrals = Users.objects.filter(referred_by=user) if user else []
+    Users.objects.filter(referred_by=user) if user else []
     referred_by = user.referred_by.first_name if user and user.referred_by else None
-    context = {'referral_link': referral_link, 'referrals': referrals, 'referred_by': referred_by}
+    context = {'referral_link': referral_link, 'referrals': referrals, 'referred_by': referred_by, 'segment': 'friends',}
     return render(request, 'users/friends.html', context)
 
 def share(request): 
@@ -46,6 +48,7 @@ def share(request):
         'telegram_links': telegram_links,
         'instagram_links': instagram_links,
         'user': user,
+        'segment': 'share',
     }
     return render(request, 'users/share.html', context)
 
@@ -101,7 +104,7 @@ def style(request):
     if telegram_id:
         ball = Ball.objects.filter(user__telegram_id=telegram_id).first()
 
-    context = {'ball': ball}
+    context = {'ball': ball, 'segment': 'style',}
     return render(request, 'users/style.html', context)
 
 
@@ -135,7 +138,7 @@ def verify_user(request):
                         return JsonResponse({
                             "first_name": user.first_name,
                             "last_name": user.last_name,
-                            "username": user.username
+                            "username": user.username_link 
                         })
                     except Users.DoesNotExist:
                         return JsonResponse({"error": "Foydalanuvchi topilmadi"}, status=404)
