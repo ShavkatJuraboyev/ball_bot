@@ -18,10 +18,22 @@ def index(request):
     context = {'ball':ball}
     return render(request, 'users/index.html', context)
 
-def friends(request):
-    return render(request, 'users/friends.html')
+def get_referral_link(user):
+    base_url = "https://t.me/devpython1_bot?start="  # Botning haqiqiy username
+    referral_link = f"{base_url}{user.referral_code}"
+    return referral_link
 
-def share(request):
+def friends(request):
+    telegram_id = request.session.get('telegram_id')
+    user = Users.objects.filter(telegram_id=telegram_id).first()
+
+    referral_link = get_referral_link(user) if user else None 
+    referrals = user.referrals.all() if user else []
+    referred_by = user.referred_by.first_name if user and user.referred_by else None
+    context = {'referral_link': referral_link, 'referrals': referrals, 'referred_by': referred_by}
+    return render(request, 'users/friends.html', context)
+
+def share(request): 
     telegram_id = request.session.get('telegram_id')
     if telegram_id:
         user = get_object_or_404(Users, telegram_id=telegram_id)
@@ -83,11 +95,15 @@ def add_link_ball(request, link_id, telegram_id):
 
 def style(request):
     telegram_id = request.session.get('telegram_id')
+    
     ball = None
+    # `telegram_id` mavjud bo'lsa, faqatgina unda `Ball` obyektini qidiramiz
     if telegram_id:
-        ball = get_object_or_404(Ball, user__telegram_id=telegram_id)
-    context = {'ball':ball}
+        ball = Ball.objects.filter(user__telegram_id=telegram_id).first()
+
+    context = {'ball': ball}
     return render(request, 'users/style.html', context)
+
 
 def style2(request):
     return render(request, 'users/style2.html')

@@ -193,6 +193,9 @@ body {
 .oxiri a:last-child{
     margin-bottom: 50px;
 }
+.friend{
+    margin-bottom: 55px;
+}
 .logo-share {
     display: flex;
     align-items: center;

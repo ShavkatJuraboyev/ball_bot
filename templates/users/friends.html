@@ -1,40 +1,69 @@
 {% extends 'users/base.html' %}
 {% load static %}
 {% block content %}
+<div class="friend">
     <div class="main-content">
         <img src="{% static 'images/security.png' %}" alt="logo">
         <h2>Do'stlarni taklif qilish</h2>
-        <p>Lorem ipsum, dolor sit amet consectetur adipisicing elit. </p>
+        <p>Ushubu link orqali do'stlaringizni taklif eting</p>
     </div>
+    {% if referral_link %}
     <div class="share-links">
-        <a href="#" class="logo-share">
-            <img src="../static/images/sovga.png" alt="friends">
+        <a class="logo-share">
+            <img src="{% static 'images/sovga.png' %}" alt="friends">
             <div>
-                <div class="friends">Do'stlarni taklif qiling va</div>
-                <span class="olmas">⭐️</span> <span class="priz">+1000</span>  <span style="color: aliceblue;">yulduzcha oling</span>
-            </div>
-            <div class="links">
-                <i class="fa-solid fa-chevron-right"></i>
+                <div class="friends" id="referralLink">{{ referral_link }}</div>
+                <span class="olmas">⭐️</span> <span class="priz">+1000</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span style="color: aliceblue;">link copy</span> <span> <i class="fa-solid fa-copy" onclick="copyReferralLink()"></i></span>
             </div>
         </a>
     </div>
+    {% else %}
+    <p>Taklif havolasini yaratish uchun botga kirishingiz kerak.</p>
+    {% endif %}
     
     <div class="friends-info">
         <div>
-             <span> Siz allaqachon 👍👍👍 tomonidan taklif qilingansiz</span>
+            {% if referred_by %}
+                <span>Siz botga {{ referred_by }} tomonidan taklif qilingansiz</span>
+            {% else %}
+                <span>Siz hali hech kim tomonidan taklif qilinmagansiz</span>
+            {% endif %}
         </div>
     </div>
-    <div class="list">
-        <p>Siz taklif qilgan do'stlar</p>
-        <i class="fa-sharp-duotone fa-solid fa-arrows-rotate"></i>
-    </div>
-    <div class="share-links oxiri">
-        <a class="logo-share">
-            <img src="{% static 'images/person.png' %}" alt="friends">
-            <div>
-                <div class="friends">Do'st (Ismi)</div>
-                <span class="olmas">⭐️</span> <span class="priz">+2</span>
+    {% if referrals %}
+        <div class="list">
+            <p>Siz taklif qilgan do'stlar</p>
+            <i class="fa-sharp-duotone fa-solid fa-arrows-rotate" onclick="window.location.reload();"></i>
+
+        </div>
+        {% for referral in referrals %}
+            <div class="share-links">
+                <a class="logo-share">
+                    <img src="{% static 'images/person.png' %}" alt="friends">
+                    <div>
+                        <div class="friends">{{ referral.first_name }} {{ referral.last_name }}</div>
+                        <span class="olmas">⭐️</span> <span class="priz">+2</span>
+                    </div>
+                </a>
             </div>
-        </a>
-    </div>
+        {% endfor %}
+    {% else %}
+        <div class="list">
+            <p>Siz hech kimni taklif qilmagansiz.</p>
+        </div>
+    {% endif %}
+</div>
+    <script>
+        function copyReferralLink() {
+            // Referral linkni olish
+            const referralLink = document.getElementById("referralLink").innerText;
+            
+            // Linkni clipboardga nusxalash
+            navigator.clipboard.writeText(referralLink).then(function() {
+                alert("Referral link ko'chirildi!");
+            }).catch(function(error) {
+                alert("Linkni ko'chirib bo'lmadi, qaytadan urinib ko'ring.");
+            });
+        }
+        </script>
 {% endblock content %}

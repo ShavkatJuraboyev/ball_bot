@@ -1,12 +1,17 @@
 from django.db import models
 from django.contrib.auth.models import User
+import uuid
 
 class Users(models.Model):
     telegram_id = models.BigIntegerField(unique=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100, blank=True, null=True)
     username = models.CharField(max_length=100, blank=True, null=True)
+    username_link = models.CharField(max_length=100, blank=True, null=True)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
+    # Taklif havolasi uchun referal kod
+    referral_code = models.UUIDField(default=uuid.uuid4, unique=True)
+    referred_by = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='referrals')
 
     # OneToOne bog'lanishi orqali User modeliga bog'lash
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='user_profile')
