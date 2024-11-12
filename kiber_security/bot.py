@@ -56,7 +56,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
             # Taklif qilgan foydalanuvchining ballini yangilash
             referrer_ball, _ = await get_or_create_ball(referrer)
-            referrer_ball.friends_ball += 200
+            referrer_ball.friends_ball += 1000
             referrer_ball.all_ball = referrer_ball.youtube_ball + referrer_ball.telegram_ball + referrer_ball.instagram_ball + referrer_ball.friends_ball
             await sync_to_async(referrer_ball.save)()
 
@@ -71,7 +71,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     else:
         # Web app tugmasini yuborish
         keyboard = [
-            [InlineKeyboardButton("O'rganishni boshlash", web_app=WebAppInfo(url="https://38af-195-158-8-30.ngrok-free.app"))]
+            [InlineKeyboardButton("O'rganishni boshlash", web_app=WebAppInfo(url="https://5480-195-158-8-30.ngrok-free.app"))]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text("Kiber xavfsizlikni o'rganing:", reply_markup=reply_markup)
@@ -88,7 +88,7 @@ async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     
     # Web app tugmasini yuborish
     keyboard = [
-        [InlineKeyboardButton("O'rganishni boshlash", web_app=WebAppInfo(url="https://38af-195-158-8-30.ngrok-free.app"))]
+        [InlineKeyboardButton("O'rganishni boshlash", web_app=WebAppInfo(url="https://5480-195-158-8-30.ngrok-free.app"))]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Kiber xavfsizlikni o'rganing:", reply_markup=reply_markup)

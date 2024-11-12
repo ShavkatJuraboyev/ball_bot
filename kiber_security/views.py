@@ -69,7 +69,7 @@ def add_link_ball(request, link_id, telegram_id):
             if not LinkVisit.objects.filter(user=user, link=link).exists():
                 # Linkni foydalanuvchi tomonidan ko'rildi deb belgilash
                 LinkVisit.objects.create(user=user, link=link)
-
+ 
                 # Foydalanuvchi uchun ballni olish yoki yaratish
                 ball, created = Ball.objects.get_or_create(user=user)
                 
