@@ -1,3 +1,4 @@
+from django.utils.timezone import now
 from django.db import models
 import uuid
 
@@ -21,6 +22,13 @@ class Users(models.Model):
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
 
+class UserChannels(models.Model):
+    user = models.ForeignKey(Users, on_delete=models.CASCADE)
+    channel_username = models.CharField(max_length=255)
+    joined_on = models.DateTimeField(auto_now_add=True)  # Qo'shilgan vaqt
+
+    def __str__(self):
+        return f"{self.user} {self.joined_on}"
 
 
 class Link(models.Model):
@@ -53,8 +61,6 @@ class Ball(models.Model):
         # Link turiga qarab ballarni oshirish
         if link_type == 'youtube':
             self.youtube_ball += points
-        elif link_type == 'telegram':
-            self.telegram_ball += points
         elif link_type == 'instagram':
             self.instagram_ball += points
         

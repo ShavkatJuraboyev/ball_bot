@@ -54,7 +54,6 @@ def share(request):
 
 
 def add_link_ball(request, link_id, telegram_id):
-    telegram_id = request.session.get('telegram_id')
     print(telegram_id)
     
     if telegram_id:
