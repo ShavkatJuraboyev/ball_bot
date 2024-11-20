@@ -71,7 +71,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     else:
         # Web app tugmasini yuborish
         keyboard = [
-            [InlineKeyboardButton("O'rganishni boshlash", web_app=WebAppInfo(url="https://38af-195-158-8-30.ngrok-free.app"))]
+            [InlineKeyboardButton("O'rganishni boshlash", web_app=WebAppInfo(url="https://f2a2-84-54-70-55.ngrok-free.app"))]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text("Kiber xavfsizlikni o'rganing:", reply_markup=reply_markup)
@@ -88,7 +88,7 @@ async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     
     # Web app tugmasini yuborish
     keyboard = [
-        [InlineKeyboardButton("O'rganishni boshlash", web_app=WebAppInfo(url="https://38af-195-158-8-30.ngrok-free.app"))]
+        [InlineKeyboardButton("O'rganishni boshlash", web_app=WebAppInfo(url="https://f2a2-84-54-70-55.ngrok-free.app"))]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Kiber xavfsizlikni o'rganing:", reply_markup=reply_markup)
