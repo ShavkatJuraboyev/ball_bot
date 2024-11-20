@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Testlar</title>
+</head>
+<body>
+    <h1>Testlar</h1>
+
+    <h2>Mavjud testlar:</h2>
+    <ul>
+        {% for test in tests %}
+            <li>
+                {{ test.title }}
+                {% if test.id in completed_tests %}
+                    - Oldin ishlagansiz
+                    <a href="{% url 'test_result' test_id=test.id %}"> Natija</a>
+                {% else %}
+                    - <a href="{% url 'test_detail' test.id %}">Batafsil</a>
+                {% endif %}
+            </li>
+        {% empty %}
+            <li>Hozircha mavjud testlar yo'q.</li>
+        {% endfor %}
+    </ul>
+
+</body>
+</html>

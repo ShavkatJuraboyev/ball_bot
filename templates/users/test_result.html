@@ -1,0 +1,26 @@
+<h1>{{ user_test.test.title }} - Natija</h1>
+<p>Ballar: {{ score }}</p>
+
+{% if user_test.is_completed %}
+    <p>Testni allaqachon tugatdingiz!</p>
+    <p>Natijalarni quyida ko'rishingiz mumkin:</p>
+    <p>Ballaringiz: {{ user_test.score }}</p>
+
+    <table>
+        <tr>
+            <th>Savol</th>
+            <th>Javob</th>
+            <th>Tog'rilik</th>
+        </tr>
+        {% for answer in user_answers %}
+        <tr>
+            <td>{{ answer.question.text }}</td>
+            <td>{{ answer.selected_answer.text }}</td>
+            <td>{% if answer.is_correct %}To'g'ri{% else %}Noto'g'ri{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    
+{% else %}
+    <p>Test hali tugatilmagan. Javoblaringizni tekshirib chiqing.</p>
+{% endif %}

@@ -1,9 +1,10 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from kiber_security.models import Users, Link, Ball, LinkVisit
+from kiber_security.models import Users, Link, Ball, LinkVisit, Test, UserTest, UserAnswer, Answer, Question
 from django.views.decorators.csrf import csrf_exempt
 from urllib.parse import parse_qs
 import json
 from django.http import JsonResponse, HttpResponse
+from django.utils import timezone
 
 def index(request):
     telegram_id = request.session.get('telegram_id')
@@ -20,7 +21,7 @@ def index(request):
     return render(request, 'users/index.html', context)
 
 def get_referral_link(user):
-    base_url = "https://t.me/devpython1_bot?start="  # Botning haqiqiy username
+    base_url = "https://t.me/samcyber102_bot?start="  # Botning haqiqiy username
     referral_link = f"{base_url}{user.referral_code}"
     return referral_link
 
@@ -149,3 +150,93 @@ def verify_user(request):
             return JsonResponse({"error": "initData mavjud emas"}, status=400)
 
     return JsonResponse({"error": "Notog'ri so'rov"}, status=400)
+
+
+def test_list(request):
+    telegram_id = request.session.get('telegram_id')
+    user = Users.objects.filter(telegram_id=telegram_id).first()
+
+    if not user:
+        # Agar foydalanuvchi tizimga kirmagan bo'lsa, login sahifasiga yo'naltirish
+        return redirect('login')  # yoki kerakli boshqa sahifaga
+    
+    tests = Test.objects.all()
+
+    # Foydalanuvchi testni tugatgan bo'lsa, testlarni faqat ko'rsatish
+    completed_tests = UserTest.objects.filter(user=user, is_completed=True).values_list('test_id', flat=True)
+    print("Foydalanuvchi tugatgan testlar:", completed_tests)
+
+    # Foydalanuvchi tugatgan testlardan ajratilgan testlar
+    available_tests = tests.exclude(id__in=completed_tests)
+    print("Foydalanuvchi uchun mavjud testlar:", available_tests)
+
+    return render(request, 'users/test_list.html', {'tests': tests, 'completed_tests': completed_tests})
+
+
+
+
+def test_detail(request, test_id):
+    telegram_id = request.session.get('telegram_id')
+    user = Users.objects.filter(telegram_id=telegram_id).first()
+    test = get_object_or_404(Test, id=test_id)
+
+    # Foydalanuvchi uchun UserTestni olish yoki yaratish
+    user_test, created = UserTest.objects.get_or_create(test=test, user=user)
+
+    # Agar test tugatilgan bo'lsa, qayta ishlashga ruxsat bermaslik
+    if user_test.is_completed:
+        return render(request, 'users/test_completed.html', {'test': test})
+
+    questions = test.questions.all()  # Testga tegishli savollarni olish
+    if request.method == "POST":
+        for question in questions:
+            selected_answer_id = request.POST.get(f'question_{question.id}')
+            if selected_answer_id:
+                selected_answer = get_object_or_404(Answer, id=selected_answer_id)
+                # Javobni saqlash uchun UserAnswer modeli yaratish
+                UserAnswer.objects.create(
+                    user=user,
+                    question=question,
+                    selected_answer=selected_answer,
+                    test=test
+                )
+        return redirect('test_list')
+    
+    return render(request, 'users/start.html', {'test': test, 'questions': questions})
+
+
+
+def test_result(request, test_id):
+    telegram_id = request.session.get('telegram_id')
+    user = Users.objects.filter(telegram_id=telegram_id).first()
+    test = get_object_or_404(Test, id=test_id)
+
+    # Foydalanuvchi uchun UserTestni olish
+    user_test, created = UserTest.objects.get_or_create(test=test, user=user)
+
+    # Agar test tugatilgan bo'lsa, natijalar ko'rsatiladi
+    if user_test.is_completed:
+        return render(request, 'users/test_completed.html', {'user_test': user_test})
+
+    user_answers = UserAnswer.objects.filter(test=test, user=user)
+    
+    # Ballarni hisoblash
+    score = 0
+    for answer in user_answers:
+        if answer.selected_answer.is_correct:
+            score += 1
+            answer.is_correct = True
+        else:
+            answer.is_correct = False
+        answer.save()  # Yangi is_correct qiymatini saqlash
+    
+    user_test.score = score
+    user_test.is_completed = True  # Testni tugagan deb belgilash
+    user_test.save()
+
+    return render(request, 'users/test_result.html', {
+        'user_test': user_test,
+        'user_answers': user_answers,
+        'score': score
+    })
+

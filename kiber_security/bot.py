@@ -132,11 +132,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not user.phone_number:
         contact_button = KeyboardButton("Telefon raqamni yuborish", request_contact=True)
         reply_markup = ReplyKeyboardMarkup([[contact_button]], resize_keyboard=True, one_time_keyboard=True)
-        await update.message.reply_text("Iltimos, telefon raqamingizni yuboring:", reply_markup=reply_markup)
+        await update.message.reply_text("Samarqand viloyat Ichki ishlar boshqarmasi Kiberxavfsizlik bo'limi, Kiberjinoyatchilika qarshi birga kurashamiz! \nIltimos, telefon raqamingizni yuboring:", reply_markup=reply_markup)
     else:
         # Web app tugmasini yuborish
         keyboard = [
-            [InlineKeyboardButton("O'rganishni boshlash", web_app=WebAppInfo(url="https://eadb-195-158-8-30.ngrok-free.app"))]
+            [InlineKeyboardButton("O'rganishni boshlash", web_app=WebAppInfo(url="https://68cc-195-158-8-30.ngrok-free.app"))]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text("Kiber xavfsizlikni o'rganing:", reply_markup=reply_markup)
@@ -153,7 +153,7 @@ async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     
     # Web app tugmasini yuborish
     keyboard = [
-        [InlineKeyboardButton("O'rganishni boshlash", web_app=WebAppInfo(url="https://eadb-195-158-8-30.ngrok-free.app"))]
+        [InlineKeyboardButton("O'rganishni boshlash", web_app=WebAppInfo(url="https://68cc-195-158-8-30.ngrok-free.app"))]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Kiber xavfsizlikni o'rganing:", reply_markup=reply_markup)

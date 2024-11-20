@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ test.title }}</title>
+</head>
+<body>
+    <h1>{{ test.title }}</h1>
+    {% if user_test.is_completed %}
+    <p>Testni allaqachon tugatdingiz!</p>
+    {% else %}
+    <form method="POST">
+        {% csrf_token %}
+        {% for question in questions %}
+        <div>
+            <p>{{ question.text }}</p>
+            {% for answer in question.answers.all %}
+                <input type="radio" name="question_{{ question.id }}" value="{{ answer.id }}">
+                <label>{{ answer.text }}</label><br>
+            {% endfor %}
+        </div>
+        {% endfor %}
+        <button type="submit">Javoblarni yuborish</button>
+    </form>
+    {% endif %}
+
+</body>
+</html>

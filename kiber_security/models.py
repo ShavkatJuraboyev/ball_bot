@@ -82,3 +82,48 @@ class LinkVisit(models.Model):
 
     def __str__(self):
         return f"{self.user} visited {self.link} at {self.visited_at}"
+    
+
+
+class Test(models.Model):
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
+class UserTest(models.Model):
+    user = models.ForeignKey(Users, on_delete=models.CASCADE)
+    test = models.ForeignKey(Test, on_delete=models.CASCADE)
+    is_completed = models.BooleanField(default=False)
+    score = models.IntegerField(default=0)  # Foydalanuvchi ballari
+
+    def __str__(self):
+        return f"{self.user.first_name} - {self.test.title}"
+
+class Question(models.Model):
+    test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name='questions')
+    text = models.CharField(max_length=500)
+
+    def __str__(self):
+        return self.text
+
+class Answer(models.Model):
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='answers')
+    text = models.CharField(max_length=300)
+    is_correct = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.text
+
+class UserAnswer(models.Model):
+    user = models.ForeignKey(Users, on_delete=models.CASCADE)
+    question = models.ForeignKey(Question, on_delete=models.CASCADE)
+    selected_answer = models.ForeignKey(Answer, on_delete=models.CASCADE)
+    test = models.ForeignKey(Test, on_delete=models.CASCADE, null=True)
+    answer = models.CharField(max_length=500, null=True)
+    is_correct = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.user.first_name} {self.user.last_name} - {self.question.text} - {self.selected_answer.text}"

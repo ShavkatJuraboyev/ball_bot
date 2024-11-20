@@ -6,7 +6,7 @@
     <img src="{% static 'images/2018-11-30-03-main.png' %}" alt="Profil">
     <div>
         <div class="username" id="user-info"></div>
-        <div class="status">CEO</div>
+        <div class="status">FIO</div>
     </div>
     <div class="profile-stats">
         <span>⭐️ {{ball.all_ball}}</span>
@@ -19,17 +19,22 @@
     <h2>Siz bajargan missiyalar</h2>
     <div class="game-list">
         <div class="game-item"> 
-            <img src="{% static 'images/2018-11-30-03-main.png' %}" alt="Game">
-            <span>Yashirin so'z</span>
-            <a href="#">⭐️ x3</a>
+            <img src="{% static 'images/kod1.png' %}" alt="Game">
+            <span>Test</span>
+            <a href="{% url 'test_list' %}">⭐️ x3</a>
         </div>
         <div class="game-item">
-            <img src="{% static 'images/Diqqat2.png' %}" alt="Game">
+            <img src="{% static 'images/kod2.png' %}" alt="Game">
             <span>Kodni buzush</span>
             <a href="#">⭐️ x3</a>
         </div>
         <div class="game-item">
-            <img src="{% static 'images/suniy.png' %}" alt="Game">
+            <img src="{% static 'images/kod3.png' %}" alt="Game">
+            <span>Firibgarlik</span>
+            <a href="#">⭐️ x3</a>
+        </div>
+        <div class="game-item">
+            <img src="{% static 'images/kod4.png' %}" alt="Game">
             <span>Su'niy intilekt</span>
             <a href="#">⭐️ x3</a>
         </div>
