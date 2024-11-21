@@ -1,26 +1,45 @@
-<h1>{{ user_test.test.title }} - Natija</h1>
-<p>Ballar: {{ score }}</p>
+{% extends 'users/base.html' %}
+{% load static %}
+{% block content %}
+<div class="profile-info"> 
+    <img src="{% static 'images/2018-11-30-03-main.png' %}" alt="Profil">
+    <div>
+        <div class="username" id="user-info"></div>
+        <div class="status">FIO</div>
+    </div>
+    <div class="profile-stats">
+        <span>⭐️ {{ball.all_ball}}</span>
+        <a href="#" style="color: rgb(0, 132, 255);"><i class="fas fa-cog"></i> </a>
+    </div>
+</div>
+<div class="main-content-color">
+    <h1 class="test-title">{{ user_test.test.title }} - Natija</h1>
 
-{% if user_test.is_completed %}
-    <p>Testni allaqachon tugatdingiz!</p>
-    <p>Natijalarni quyida ko'rishingiz mumkin:</p>
-    <p>Ballaringiz: {{ user_test.score }}</p>
+    {% if user_test.is_completed %}
+        <p class="user-score">Balingiz: {{ user_test.score }}</p>
+        <table class="result-table">
+            <tr class="table-header">
+                <th class="header-cell">Savol</th>
+                <th class="header-cell">Javob</th>
+                <th class="header-cell">To'g'rilik</th>
+            </tr>
+            {% for answer in user_answers %}
+            <tr class="table-row">
+                <td class="table-cell question-cell">{{ answer.question.text }}</td>
+                <td class="table-cell answer-cell">{{ answer.selected_answer.text }}</td>
+                <td class="table-cell correctness-cell">
+                    {% if answer.is_correct %}
+                        <span class="correct">To'g'ri</span>
+                    {% else %}
+                        <span class="incorrect">Noto'g'ri</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p class="not-completed-alert">Test hali tugatilmagan. Javoblaringizni tekshirib chiqing.</p>
+    {% endif %}
+</div>
 
-    <table>
-        <tr>
-            <th>Savol</th>
-            <th>Javob</th>
-            <th>Tog'rilik</th>
-        </tr>
-        {% for answer in user_answers %}
-        <tr>
-            <td>{{ answer.question.text }}</td>
-            <td>{{ answer.selected_answer.text }}</td>
-            <td>{% if answer.is_correct %}To'g'ri{% else %}Noto'g'ri{% endif %}</td>
-        </tr>
-        {% endfor %}
-    </table>
-    
-{% else %}
-    <p>Test hali tugatilmagan. Javoblaringizni tekshirib chiqing.</p>
-{% endif %}
+{% endblock content %}
