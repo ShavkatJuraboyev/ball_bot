@@ -1,0 +1,35 @@
+{% extends 'users/base.html' %}
+{% load static %}
+{% block content %}
+<div class="profile-info"> 
+    <img src="{% static 'images/2018-11-30-03-main.png' %}" alt="Profil">
+    <div>
+        <div class="username" id="user-info"></div>
+        <div class="status">FIO</div>
+    </div>
+    <div class="profile-stats">
+        <span>⭐️ {{ball.all_ball}}</span>
+        <a href="#" style="color: rgb(0, 132, 255);"><i class="fas fa-cog"></i> </a>
+    </div>
+</div>
+<div class="main-content-color">
+    <h2 class="section-title">Mavjud testlar:</h2>
+    <ul class="test-list">
+        {% for test in tests %}
+            <li class="test-item">
+                <span class="test-title">{{ test.title }}</span>
+                {% if test.id in completed_tests %}
+                    <span class="test-status"><br> Oldin ishlagansiz</span>
+                    <a href="{% url 'test_result' test.id %}" class="test-link result-link">Natija</a>
+                {% else %}
+                    <span class="test-status"> - </span>
+                    <a href="{% url 'test_detail' test.id %}" class="test-link detail-link">Ishlash</a>
+                {% endif %}
+            </li>
+        {% empty %}
+            <li class="empty-item">Hozircha mavjud testlar yo'q.</li>
+        {% endfor %}
+    </ul>
+</div>
+
+{% endblock content %}

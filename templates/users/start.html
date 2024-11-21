@@ -1,0 +1,49 @@
+{% extends 'users/base.html' %}
+{% load static %}
+{% block content %}
+<div class="profile-info"> 
+    <img src="{% static 'images/2018-11-30-03-main.png' %}" alt="Profil">
+    <div>
+        <div class="username" id="user-info"></div>
+        <div class="status">FIO</div>
+    </div>
+    <div class="profile-stats">
+        <span>⭐️ {{ball.all_ball}}</span>
+        <a href="#" style="color: rgb(0, 132, 255);"><i class="fas fa-cog"></i> </a>
+    </div>
+</div>
+<div class="main-content-color">
+    <h1 class="test-title">{{ test.title }}</h1>
+    
+    {% if user_test.is_completed %}
+        <p class="completion-message">Testni allaqachon tugatdingiz!</p>
+    {% else %}
+        <form method="POST" class="test-form">
+            {% csrf_token %}
+            {% for question in questions %}
+                <div class="question-block">
+                    <p class="question-text">{{ question.text }}</p>
+                    <div class="answers-block">
+                        {% for answer in question.answers.all %}
+                            <div class="answer-item">
+                                <input 
+                                    type="radio" 
+                                    name="question_{{ question.id }}" 
+                                    value="{{ answer.id }}" 
+                                    id="answer_{{ question.id }}_{{ answer.id }}" 
+                                    class="answer-radio"
+                                >
+                                <label for="answer_{{ question.id }}_{{ answer.id }}" class="answer-label">
+                                    {{ answer.text }}
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+            <button type="submit" class="submit-button">Javoblarni yuborish</button>
+        </form>
+    {% endif %}
+</div>
+
+{% endblock content %}
