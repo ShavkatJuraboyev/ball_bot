@@ -25,8 +25,8 @@ SECRET_KEY = 'django-insecure-_8ftcf8!v+=mc3i(69&ti%l37s=_epa%14b0tsc203ypp@7tuu
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '4225-188-113-251-193.ngrok-free.app']
-CSRF_TRUSTED_ORIGINS = ['https://4225-188-113-251-193.ngrok-free.app']
+ALLOWED_HOSTS = ['*']
+
 
 # Application definition
 
@@ -130,4 +130,4 @@ MEDIA_URL = '/media/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-TELEGRAM_BOT_TOKEN = "7592304333:AAHJEVwKmN6DmvL__TGAv1fc4jyErq3fNgA"
+TELEGRAM_BOT_TOKEN = "5998844452:AAEjJEN0AZCyJwLJa1CEiWDmk-7wRfLIBeY"

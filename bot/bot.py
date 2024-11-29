@@ -3,11 +3,14 @@ import sys
 import django
 import time
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup, WebAppInfo, Bot
-from telegram.ext import Application, CallbackContext, CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes
+from telegram.ext import Application, CallbackContext, CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes, CallbackQueryHandler
 from telegram.error import BadRequest
 from django.conf import settings
 from asgiref.sync import sync_to_async
 import logging
+from pytube import YouTube
+import requests
+import instaloader
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +40,6 @@ def get_or_create_ball(user):
 @sync_to_async
 def get_telegram_links():
     return list(Link.objects.filter(link_type='telegram').values_list('url', flat=True))
-
 
 
 async def check_user_in_channels(user_id, channels):
@@ -88,6 +90,59 @@ async def award_points_if_joined_all(user):
     else:
         logger.info(f"User {user.telegram_id} is not in all required channels.")
 
+def download_instagram_video(url):
+    loader = instaloader.Instaloader()
+    post = instaloader.Post.from_shortcode(loader.context, url.split("/")[-2])
+    video_url = post.video_url
+    return video_url
+
+# Facebook uchun yuklab olish funksiyasi
+def download_facebook_video(url):
+    api_url = f"https://fbdownloader.com/api/get?url={url}"
+    response = requests.get(api_url)
+    if response.ok:
+        data = response.json()
+        return data["download_url"]
+    return None
+
+# YouTube uchun yuklab olish funksiyasi
+def download_youtube_video(url):
+    yt = YouTube(url)
+    stream = yt.streams.filter(progressive=True, file_extension='mp4').first()
+    return stream.url
+
+# Callback tugmachasini boshqarish funksiyasi
+async def video_download_callback(update: Update, context: CallbackContext):
+    query = update.callback_query
+    print(f"Callback data received: {query.data}")  # Log ma’lumotlari
+    await query.answer()
+    await query.edit_message_text("Iltimos, yuklash uchun video manzilini yuboring.")
+    context.user_data["waiting_for_video_url"] = True
+
+# Foydalanuvchi link yuborganda ishlaydigan funksiya
+async def handle_user_message(update: Update, context: CallbackContext):
+    if context.user_data.get("waiting_for_video_url"):
+        text = update.message.text
+        try:
+            if "instagram.com" in text:
+                video_url = download_instagram_video(text)
+                await update.message.reply_text(f"Instagram videoni yuklash uchun link: {video_url}")
+            elif "facebook.com" in text:
+                video_url = download_facebook_video(text)
+                await update.message.reply_text(f"Facebook videoni yuklash uchun link: {video_url}")
+            elif "youtube.com" in text or "youtu.be" in text:
+                video_url = download_youtube_video(text)
+                await update.message.reply_text(f"YouTube videoni yuklash uchun link: {video_url}")
+            else:
+                await update.message.reply_text("Noto‘g‘ri link yubordingiz! Iltimos, Instagram, Facebook yoki YouTube linkini yuboring.")
+        except Exception as e:
+            await update.message.reply_text(f"Xatolik yuz berdi: {str(e)}")
+        # Davlatni o‘chirib tashlaymiz
+        context.user_data["waiting_for_video_url"] = False
+    else:
+        await update.message.reply_text("Iltimos, avval \"Video yuklash\" tugmasini bosing.")
+
+
 # /start komandasini ishlovchi funksiya
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_data = {
@@ -136,10 +191,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     else:
         # Web app tugmasini yuborish
         keyboard = [
-            [InlineKeyboardButton("O'rganishni boshlash", web_app=WebAppInfo(url="https://4225-188-113-251-193.ngrok-free.app"))]
+            [InlineKeyboardButton("Video yuklash", callback_data="video_download")],
+            [InlineKeyboardButton("O'rganishni boshlash", web_app=WebAppInfo(url="https://library.samtuit.uz"))]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text("Kiber xavfsizlikni o'rganing:", reply_markup=reply_markup)
+        await update.message.reply_text("Quydagi tugmalardan birini tanlang:", reply_markup=reply_markup)
 
 # Telefon raqamini qabul qilish
 async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -153,10 +209,11 @@ async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     
     # Web app tugmasini yuborish
     keyboard = [
-        [InlineKeyboardButton("O'rganishni boshlash", web_app=WebAppInfo(url="https://4225-188-113-251-193.ngrok-free.app"))]
+        [InlineKeyboardButton("Video yuklash", callback_data="video_download")],
+        [InlineKeyboardButton("O'rganishni boshlash", web_app=WebAppInfo(url="https://library.samtuit.uz"))]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Kiber xavfsizlikni o'rganing:", reply_markup=reply_markup)
+    await update.message.reply_text("Quydagi tugmalardan birini tanlang:", reply_markup=reply_markup)
 
 # Foydalanuvchilarni yuborish funksiyasi
 async def send_advertisement(bot: Bot, message: str, media=None):
@@ -265,7 +322,9 @@ async def handle_broadcast_media(update: Update, context: CallbackContext):
 # Asosiy bot funksiyasini yaratish
 def main() -> None:
     application = Application.builder().token(settings.TELEGRAM_BOT_TOKEN).build()
-    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(video_download_callback, pattern="^video_download$"))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_message))
+    application.add_handler(MessageHandler(filters.COMMAND, start))
 
     conversation_handler = ConversationHandler(
         entry_points=[CommandHandler('broadcast', start_broadcast)],
@@ -277,6 +336,7 @@ def main() -> None:
     )
     application.add_handler(conversation_handler)
     application.add_handler(MessageHandler(filters.CONTACT, handle_contact))
+    
     application.run_polling()
 
 if __name__ == '__main__':
