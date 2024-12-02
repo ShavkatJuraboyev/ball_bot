@@ -1,8 +1,8 @@
-import asyncio
-from aiogram import Bot, Dispatcher, types, Router
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, FSInputFile
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
 from aiogram.filters import Command
 import yt_dlp
+import asyncio
 from aiogram.fsm.storage.memory import MemoryStorage
 
 # Bot tokeningizni kiriting
@@ -11,15 +11,14 @@ BOT_TOKEN = "6155323455:AAHYj4rVaIIiTAQhESrP3lWT16LtJXNZxlg"
 # Bot va Dispatcher obyektlari
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
-router = Router() 
-# Asosiy menyu tugmalari
-main_menu = ReplyKeyboardMarkup(
-    keyboard=[
-        # [KeyboardButton(text="YouTube")],
-        [KeyboardButton(text="Instagram")],
-        [KeyboardButton(text="Facebook")],
-    ],
-    resize_keyboard=True
+
+# Asosiy menyu uchun InlineKeyboard
+main_menu = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="YouTube", callback_data="platform_youtube")],
+        [InlineKeyboardButton(text="Instagram", callback_data="platform_instagram")],
+        [InlineKeyboardButton(text="Facebook", callback_data="platform_facebook")],
+    ]
 )
 
 # /start komandasi uchun handler
@@ -27,11 +26,12 @@ main_menu = ReplyKeyboardMarkup(
 async def send_welcome(message: types.Message):
     await message.answer("Quyidagi platformani tanlang:", reply_markup=main_menu)
 
-# Tugmalarni tanlash uchun handler
-@dp.message(lambda message: message.text in ["YouTube", "Instagram", "Facebook"])
-async def platform_selected(message: types.Message):
-    platform = message.text.lower()
-    await message.answer(f"Iltimos, {platform} video linkini yuboring.")
+# Tugma bosilganda ishlovchi handler
+@dp.callback_query(lambda callback_query: callback_query.data.startswith("platform_"))
+async def platform_selected(callback_query: types.CallbackQuery):
+    platform = callback_query.data.split("_")[1].capitalize()
+    await callback_query.message.answer(f"Iltimos, {platform} video linkini yuboring.")
+    await callback_query.answer()  # Callback'dan foydalanilgani haqida tasdiq yuborish
 
 # Linkni qayta ishlash uchun handler
 @dp.message(lambda message: message.text.startswith("http"))
@@ -90,7 +90,6 @@ async def download_instagram_facebook_video(message: types.Message, url: str):
 
 # Botni ishga tushirish
 async def main():
-    dp.include_router(router)  # Barcha routerlar avtomatik qo'shiladi
     print("Bot is starting...")
     await dp.start_polling(bot)
 

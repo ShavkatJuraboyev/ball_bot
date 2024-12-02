@@ -18,7 +18,7 @@ def index(request):
     return render(request, 'users/index.html', context)
 
 def get_referral_link(user):
-    base_url = "https://t.me/samcyber102_bot?start="  # Botning haqiqiy username
+    base_url = "https://t.me/shopingevostbot?start="  # Botning haqiqiy username
     referral_link = f"{base_url}{user.referral_code}"
     return referral_link
 

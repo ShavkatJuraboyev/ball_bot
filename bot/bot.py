@@ -1,26 +1,33 @@
 import os
 import sys
 import django
-import time
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup, WebAppInfo, Bot
-from telegram.ext import Application, CallbackContext, CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes, CallbackQueryHandler
-from telegram.error import BadRequest
-from django.conf import settings
-from asgiref.sync import sync_to_async
 import logging
-from pytube import YouTube
-import requests
-import instaloader
-
-logger = logging.getLogger(__name__)
+import yt_dlp
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, CallbackQuery, FSInputFile, ContentType
+from aiogram.filters import Command, StateFilter
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import StatesGroup, State
+from aiogram.exceptions import TelegramBadRequest
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram import F
+from asgiref.sync import sync_to_async
+from django.conf import settings
 
 # Django sozlamalarini yuklash
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
-# Modelni import qilish
 from kiber_security.models import Users, Ball, Link, UserChannels
+
+# Logger sozlash
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Bot va Dispatcher obyektlarini yaratish
+bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
+dp = Dispatcher(storage=MemoryStorage())
 
 # Telegram ID bo'yicha foydalanuvchini olish
 @sync_to_async
@@ -41,303 +48,318 @@ def get_or_create_ball(user):
 def get_telegram_links():
     return list(Link.objects.filter(link_type='telegram').values_list('url', flat=True))
 
+# Holatlar uchun FSM
+class VideoDownloadStates(StatesGroup):
+    waiting_for_video_link = State()
 
-async def check_user_in_channels(user_id, channels):
+async def check_user_in_channels(user_id: int, channels: list) -> bool:
+    """
+    Foydalanuvchini berilgan kanallarda bor yoki yo'qligini tekshirish.
+    
+    :param user_id: Telegram foydalanuvchi ID.
+    :param channels: Kanal linklarining ro'yxati.
+    :return: Agar barcha kanallarda bor bo'lsa True, aks holda False.
+    """
     bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
-    channels = [link.split("/")[-1] for link in channels]
+    channel_usernames = [link.split("/")[-1] for link in channels]  # Kanal username'larini olish
 
-    for channel_username in channels:
+    for channel_username in channel_usernames:
         try:
+            # Kanal haqida ma'lumot olish
             chat = await bot.get_chat(f"@{channel_username}")
+            # Foydalanuvchini kanalda bor yoki yo'qligini tekshirish
             member = await bot.get_chat_member(chat_id=chat.id, user_id=user_id)
-            if member.status in ['member', 'administrator', 'creator']:
-                continue  # Agar foydalanuvchi kanalda bo'lsa, keyingi kanalga o'tish
-            else:
-                return False  # Foydalanuvchi kanalda yo'q
-        except BadRequest as e:
-            logger.error(f"BadRequest error for channel {channel_username}: {e}")
-            return False
+            
+            if member.status not in ['member', 'administrator', 'creator']:
+                # Agar foydalanuvchi kanalda bo'lmasa
+                return False
+        except TelegramBadRequest as e:
+            logger.error(f"TelegramBadRequest: Kanal {channel_username} uchun xato: {e}")
+            return False  # Kanalga ulanishda xato bo'lsa ham, False qaytariladi
+
+    # Agar foydalanuvchi barcha kanallarda bo'lsa
     return True
 
 
 async def award_points_if_joined_all(user):
+    """
+    Foydalanuvchini barcha kerakli kanallarda borligini tekshiradi va ball beradi.
+    Agar foydalanuvchi yangi kanalga qo'shilgan bo'lsa, ball qo'shadi.
+
+    :param user: Foydalanuvchi obyekti.
+    """
     # Telegram kanallari ro'yxatini olish
     channels = await get_telegram_links()
-    logger.info(f"Checking if user {user.telegram_id} is in all required channels.")
+    logger.info(f"Foydalanuvchi {user.telegram_id} uchun barcha kerakli kanallarni tekshirish.")
 
-    # Foydalanuvchi barcha kanallarda borligini tekshirish
-    if await check_user_in_channels(user.telegram_id, channels):
+    # Foydalanuvchini barcha kanallarda borligini tekshirish
+    is_member = await check_user_in_channels(user.telegram_id, channels)
+
+    if is_member:
         for channel_username in channels:
-            # Foydalanuvchi kanalda bormi yoki yo'qligini tekshirish
-            user_channel, created = await sync_to_async(UserChannels.objects.get_or_create)(user=user, channel_username=channel_username)
+            # Kanalda yangi foydalanuvchini ro'yxatdan o'tkazish
+            user_channel, created = await sync_to_async(UserChannels.objects.get_or_create)(
+                user=user, channel_username=channel_username
+            )
 
-            # Agar foydalanuvchi kanalda yangi bo'lsa
             if created:
-                logger.info(f"User {user.telegram_id} joined {channel_username}. Awarding points.")
+                logger.info(f"Foydalanuvchi {user.telegram_id} {channel_username} kanalga qo'shildi. Ball berilmoqda.")
                 
-                # Ballarni yangilash
+                # Foydalanuvchining ballarini yangilash
                 user_ball, _ = await get_or_create_ball(user)
-                user_ball.telegram_ball += 200  # Ball qo'shish
+                user_ball.telegram_ball += 200 # Ball qo'shish
                 user_ball.all_ball = (
-                    user_ball.youtube_ball
-                    + user_ball.telegram_ball
-                    + user_ball.instagram_ball
-                    + user_ball.friends_ball
+                    user_ball.youtube_ball +
+                    user_ball.telegram_ball +
+                    user_ball.instagram_ball +
+                    user_ball.friends_ball
                 )
-                await sync_to_async(user_ball.save)()  # Ballni saqlash
+                await sync_to_async(user_ball.save)()
             else:
-                logger.info(f"User {user.telegram_id} already joined {channel_username}. No points awarded.")
+                logger.info(f"Foydalanuvchi {user.telegram_id} {channel_username} kanalga avvaldan qo'shilgan.")
     else:
-        logger.info(f"User {user.telegram_id} is not in all required channels.")
-
-def download_instagram_video(url):
-    loader = instaloader.Instaloader()
-    post = instaloader.Post.from_shortcode(loader.context, url.split("/")[-2])
-    video_url = post.video_url
-    return video_url
-
-# Facebook uchun yuklab olish funksiyasi
-def download_facebook_video(url):
-    api_url = f"https://fbdownloader.com/api/get?url={url}"
-    response = requests.get(api_url)
-    if response.ok:
-        data = response.json()
-        return data["download_url"]
-    return None
-
-# YouTube uchun yuklab olish funksiyasi
-def download_youtube_video(url):
-    yt = YouTube(url)
-    stream = yt.streams.filter(progressive=True, file_extension='mp4').first()
-    return stream.url
-
-# Callback tugmachasini boshqarish funksiyasi
-async def video_download_callback(update: Update, context: CallbackContext):
-    query = update.callback_query
-    print(f"Callback data received: {query.data}")  # Log ma’lumotlari
-    await query.answer()
-    await query.edit_message_text("Iltimos, yuklash uchun video manzilini yuboring.")
-    context.user_data["waiting_for_video_url"] = True
-
-# Foydalanuvchi link yuborganda ishlaydigan funksiya
-async def handle_user_message(update: Update, context: CallbackContext):
-    if context.user_data.get("waiting_for_video_url"):
-        text = update.message.text
-        try:
-            if "instagram.com" in text:
-                video_url = download_instagram_video(text)
-                await update.message.reply_text(f"Instagram videoni yuklash uchun link: {video_url}")
-            elif "facebook.com" in text:
-                video_url = download_facebook_video(text)
-                await update.message.reply_text(f"Facebook videoni yuklash uchun link: {video_url}")
-            elif "youtube.com" in text or "youtu.be" in text:
-                video_url = download_youtube_video(text)
-                await update.message.reply_text(f"YouTube videoni yuklash uchun link: {video_url}")
-            else:
-                await update.message.reply_text("Noto‘g‘ri link yubordingiz! Iltimos, Instagram, Facebook yoki YouTube linkini yuboring.")
-        except Exception as e:
-            await update.message.reply_text(f"Xatolik yuz berdi: {str(e)}")
-        # Davlatni o‘chirib tashlaymiz
-        context.user_data["waiting_for_video_url"] = False
-    else:
-        await update.message.reply_text("Iltimos, avval \"Video yuklash\" tugmasini bosing.")
+        logger.info(f"Foydalanuvchi {user.telegram_id} barcha kerakli kanallarda mavjud emas.")
 
 
 # /start komandasini ishlovchi funksiya
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+@dp.message(Command("start"))
+async def start_command(message: types.Message, state: FSMContext):
     user_data = {
-        'telegram_id': update.message.from_user.id,
-        'first_name': update.message.from_user.first_name or ' ',
-        'last_name': update.message.from_user.last_name or ' ',
-        'username_link': update.message.from_user.username or ' ',
+        'telegram_id': message.from_user.id,
+        'first_name': message.from_user.first_name or ' ',
+        'last_name': message.from_user.last_name or ' ',
+        'username_link': message.from_user.username or ' ',
     }
 
     # Taklif kodini olish (start komandasidan keyingi parametr)
-    args = context.args
-    referral_code = args[0] if args else None
+    args = message.text.split()
+    referral_code = args[1] if len(args) > 1 else None
 
     # Foydalanuvchini yaratish yoki topish
     user, created = await get_or_create_user(user_data)
 
     # Foydalanuvchi hali botga birinchi marta kirgan bo'lsa va taklif kodi berilgan bo'lsa
-    if user.is_first_start and referral_code and not user.referred_by:
+    if created and referral_code and not user.referred_by:
         referrer = await sync_to_async(Users.objects.filter(referral_code=referral_code).first)()
         if referrer:
-            # Taklif qilgan foydalanuvchiga ball berish
             user.referred_by = referrer
             user.is_first_start = False
             await sync_to_async(user.save)()
 
-            # Taklif qilgan foydalanuvchining ballini yangilash
             referrer_ball, _ = await get_or_create_ball(referrer)
             referrer_ball.friends_ball += 1000
             referrer_ball.all_ball = (
-                referrer_ball.youtube_ball + referrer_ball.telegram_ball + 
+                referrer_ball.youtube_ball + referrer_ball.telegram_ball +
                 referrer_ball.instagram_ball + referrer_ball.friends_ball
             )
             await sync_to_async(referrer_ball.save)()
+            # Taklif qilgan foydalanuvchiga 1000 ball qo'shilgani haqida xabar yuborish
+            await dp.bot.send_message(chat_id=referrer.telegram_id, text="Siz yangi do'stingizni taklif qildingiz va 1000 ball qo'shildi!")
 
-            # Referrerni xabardor qilish
-            await context.bot.send_message(chat_id=referrer.telegram_id, text="Siz yangi do'stingizni taklif qildingiz va 1000 ball qo'shildi!")
-
-    # Foydalanuvchini kanalda borligini tekshirib, 200 ball berish
     await award_points_if_joined_all(user)
-
-    # Telefon raqami mavjud emasligini tekshiriladi
-    if not user.phone_number:
-        contact_button = KeyboardButton("Telefon raqamni yuborish", request_contact=True)
-        reply_markup = ReplyKeyboardMarkup([[contact_button]], resize_keyboard=True, one_time_keyboard=True)
-        await update.message.reply_text("Samarqand viloyat Ichki ishlar boshqarmasi Kiberxavfsizlik bo'limi, Kiberjinoyatchilika qarshi birga kurashamiz! \nIltimos, telefon raqamingizni yuboring:", reply_markup=reply_markup)
+    # Telefon raqami mavjudligini tekshirish
+    if user.phone_number:
+        # Telefon raqami avval yuborilgan bo'lsa, inline tugmalarni ko'rsatish
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="Video yuklash 🔽", callback_data="video_download")],
+                [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://1cb8-195-158-8-30.ngrok-free.app"))]
+            ]
+        )
+        await message.answer("Quyidagi tugmalardan birini tanlang:", reply_markup=keyboard)
     else:
-        # Web app tugmasini yuborish
-        keyboard = [
-            [InlineKeyboardButton("Video yuklash", callback_data="video_download")],
-            [InlineKeyboardButton("O'rganishni boshlash", web_app=WebAppInfo(url="https://library.samtuit.uz"))]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text("Quydagi tugmalardan birini tanlang:", reply_markup=reply_markup)
+        # Telefon raqami hali yuborilmagan bo'lsa, so'rash
+        contact_keyboard = ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text="📞Telefon raqamni ulashish", request_contact=True)]
+            ],
+            resize_keyboard=True,
+            one_time_keyboard=True
+        )
+        await message.answer("Samarqand viloyat Ichki ishlar boshqarmasi Kiberxavfsizlik bo'limi, Kiberjinoyatchilika qarshi birga kurashamiz! \n🤳Iltimos, telefon raqamingizni yuboring:", reply_markup=contact_keyboard)
 
-# Telefon raqamini qabul qilish
-async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    telegram_id = update.message.contact.user_id
+@dp.message(F.contact)
+async def handle_contact(message: types.Message, state: FSMContext):
+    telegram_id = message.contact.user_id
     user = await get_user_by_telegram_id(telegram_id)
-    
-    if user:
-        user.phone_number = update.message.contact.phone_number
-        await sync_to_async(user.save)()
-        await update.message.reply_text("Telefon raqamingiz saqlandi.")
-    
-    # Web app tugmasini yuborish
-    keyboard = [
-        [InlineKeyboardButton("Video yuklash", callback_data="video_download")],
-        [InlineKeyboardButton("O'rganishni boshlash", web_app=WebAppInfo(url="https://library.samtuit.uz"))]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Quydagi tugmalardan birini tanlang:", reply_markup=reply_markup)
 
-# Foydalanuvchilarni yuborish funksiyasi
+    if user:
+        user.phone_number = message.contact.phone_number
+        await sync_to_async(user.save)()
+        await message.answer("Telefon raqamingiz saqlandi.")
+
+    # Web app tugmasini yuborish
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="Video yuklash 🔽", callback_data="video_download")],
+            [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://1cb8-195-158-8-30.ngrok-free.app"))]
+        ]
+    )
+    await message.answer("Quyidagi tugmalardan birini tanlang:", reply_markup=keyboard)
+
+
+# Video yuklash tugmasi uchun handler
+@dp.callback_query(lambda callback_query: callback_query.data.startswith("video_download"))
+async def video_download_handler(callback: CallbackQuery):
+    await callback.message.edit_text("Videoning platformasini tanlang:")
+    platform_keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="✅ YouTube", callback_data="platform_youtube")],
+            [InlineKeyboardButton(text="✅ Instagram", callback_data="platform_instagram")],
+            [InlineKeyboardButton(text="✅ Facebook", callback_data="platform_facebook")],
+            [InlineKeyboardButton(text="🔙 Ortga", callback_data="go_back")]
+        ]
+    )
+    await callback.message.edit_reply_markup(reply_markup=platform_keyboard)
+
+# Ortga qaytish tugmasi uchun handler
+@dp.callback_query(lambda callback_query: callback_query.data == "go_back")
+async def go_back_handler(callback: CallbackQuery):
+    # Ortga tugmasi bosilganda foydalanuvchiga Web app tugmalari bilan qaytish
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="Video yuklash 🔽", callback_data="video_download")],
+            [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://1cb8-195-158-8-30.ngrok-free.app"))]
+        ]
+    )
+    await callback.message.edit_text("Quyidagi tugmalardan birini tanlang:", reply_markup=keyboard)
+
+
+# Platforma tanlash handler
+@dp.callback_query(lambda callback_query: callback_query.data.startswith("platform_"))
+async def platform_selected_handler(callback: CallbackQuery, state: FSMContext):  # `state` qo'shildi
+    platform = callback.data.split("_")[1].capitalize()
+    await callback.answer(f"{platform} tanlandi. Endi videoning linkini yuboring.")
+    await callback.message.edit_text(f"Endi {platform} uchun videoning linkini yuboring:")
+
+    # FSM holatini o‘rnatish
+    await state.set_state(VideoDownloadStates.waiting_for_video_link)
+
+
+# Linkni qayta ishlash uchun handler (faqat oddiy foydalanuvchilar uchun)
+@dp.message(F.text.startswith("http"))
+async def process_link(message: types.Message, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state == VideoDownloadStates.waiting_for_video_link.state:
+        url = message.text
+        platform = None
+
+        # Platformani aniqlash
+        if "youtube.com" in url or "youtu.be" in url:
+            platform = "YouTube"
+        elif "instagram.com" in url:
+            platform = "Instagram"
+        elif "facebook.com" in url:
+            platform = "Facebook"
+
+        if not platform:
+            await message.answer("Noto'g'ri platforma yoki link. Iltimos, qayta tekshirib yuboring.")
+            return
+
+        await message.answer(f"Video yuklanmoqda... ({platform})")
+        try:
+            if platform == "YouTube":
+                await download_youtube_video(message, url)
+            else:
+                await download_instagram_facebook_video(message, url)
+        except Exception as e:
+            await message.answer(f"Xato yuz berdi: {e}")
+
+        # Holatni tozalash
+        await state.clear()
+    else:
+        await message.answer("Iltimos, avval platformani tanlang va linkni yuboring.")
+
+
+# YouTube uchun yuklash funksiyasi
+async def download_youtube_video(message: types.Message, url: str):
+    import yt_dlp
+
+    ydl_opts = {
+        'outtmpl': 'downloads/%(title)s.%(ext)s',
+        'format': 'best',
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=True)
+        file_path = ydl.prepare_filename(info)
+
+    video = FSInputFile(file_path)
+    await message.bot.send_video(message.chat.id, video)
+    await message.answer("Video muvaffaqiyatli yuklandi!")
+
+
+# Instagram va Facebook uchun yuklash funksiyasi
+async def download_instagram_facebook_video(message: types.Message, url: str):
+    ydl_opts = {
+        'outtmpl': 'downloads/%(title)s.%(ext)s',
+        'format': 'best',
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=True)
+        file_path = ydl.prepare_filename(info)
+
+    video = FSInputFile(file_path)  # Faylni FSInputFile ga o'girish
+    await bot.send_video(message.chat.id, video)
+    await message.answer("Video muvaffaqiyatli yuklandi!")
+
+
+ADMIN_ID = 1421622919  # Admin ID
+
+# Media turidagi xabarlarni yuborish
 async def send_advertisement(bot: Bot, message: str, media=None):
     users = await sync_to_async(list)(Users.objects.all())  # Foydalanuvchilarni olish
     for user in users:
         try:
             if media:
                 if media['type'] == 'photo':
-                    await bot.send_photo(chat_id=user.telegram_id, photo=media['file'], caption=message)
+                    await bot.send_photo(user.telegram_id, media['file_id'], caption=message)
                 elif media['type'] == 'video':
-                    await bot.send_video(chat_id=user.telegram_id, video=media['file'], caption=message)
-                elif media['type'] == 'gif':
-                    await bot.send_animation(chat_id=user.telegram_id, animation=media['file'], caption=message)
+                    await bot.send_video(user.telegram_id, media['file_id'], caption=message)
             else:
-                await bot.send_message(chat_id=user.telegram_id, text=message)
+                await bot.send_message(user.telegram_id, message)
         except Exception as e:
-            logger.warning(f"Xabar yuborib bo'lmadi: {user.telegram_id}, sabab: {e}")
+            logger.error(f"Foydalanuvchi {user.telegram_id} uchun reklama yuborishda xatolik: {e}")
 
-
-# Adminni reklama yuborish uchun kutish
-ASK_MEDIA, WAIT_FOR_MEDIA = range(2)
-
-ADMIN_ID = 1421622919  # Admin ID
-# Adminni reklama yuborish uchun kutish bosqichi
-async def start_broadcast(update: Update, context: CallbackContext):
-    if update.effective_user.id == ADMIN_ID:
-        await update.message.reply_text("Iltimos, reklama matni yoki fayl yuboring.")
-        return ASK_MEDIA
+# Adminning /broadcast buyrug'i uchun handler
+@dp.message(Command("broadcast"))
+async def start_broadcast(message: types.Message, state: FSMContext):
+    if message.from_user.id == ADMIN_ID:
+        await state.set_state("broadcast")  # Holatni "broadcast"ga o'rnatish
+        await message.answer("Iltimos, reklama matni yoki media fayl yuboring.")
     else:
-        await update.message.reply_text("Sizda ushbu amalni bajarish uchun ruxsat yo'q.")
-        return ConversationHandler.END
+        await message.answer("Sizda ushbu amalni bajarish uchun ruxsat yo'q.")
 
-# Admin matn yoki fayl yuborganda
-async def handle_broadcast_media(update: Update, context: CallbackContext):
-    admin_id = 1421622919  # Admin Telegram ID
-    if update.message.from_user.id != admin_id:
-        return ConversationHandler.END
-    # Agar matn yuborilgan bo'lsa
-    if update.message.text:
-        message = update.message.text
-        await send_advertisement(context.bot, message)  # Matnli xabar yuborish
-        await update.message.reply_text("Reklama barcha foydalanuvchilarga yuborildi.")
-    
-    # Agar rasm yuborilgan bo'lsa
-    elif update.message.photo:
-        try:
-            photo = update.message.photo[-1].file_id
-            media = {'type': 'photo', 'file': photo}
+@dp.message(StateFilter("broadcast"), F.content_type.in_([ContentType.TEXT, ContentType.PHOTO, ContentType.VIDEO]))
+async def handle_broadcast_media(message: types.Message, state: FSMContext):
+    if message.from_user.id != ADMIN_ID:
+        await state.clear()
+        return
 
-            # Admin yuborgan xabar matni sifatida caption (izoh) olinadi
-            message = update.message.caption if update.message.caption else "Adminning yuborgan rasmli reklama xabari"
-            
-            # Rasmlarni foydalanuvchilarga yuborish
-            await send_advertisement(context.bot, message, media)
-            
-            # Adminga tasdiq xabari yuborish
-            await update.message.reply_text("Rasmli reklama barcha foydalanuvchilarga yuborildi.")
-        except Exception as e:
-            logger.error(f"Rasmni yuborishda xatolik: {e}")
-            await update.message.reply_text("Rasmni yuborishda muammo yuzaga keldi.")
-
-    
-    # Agar video yuborilgan bo'lsa
-    elif update.message.video:
-        try:
-            message = "Adminning yuborgan videoli reklama xabari"
-            video = update.message.video.file_id
-            media = {'type': 'video', 'file': video}
-
-            # Admin yuborgan xabar matni sifatida caption (izoh) olinadi
-            message = update.message.caption if update.message.caption else "Adminning yuborgan rasmli reklama xabari"
-
-            await send_advertisement(context.bot, message, media)  # Video yuborish
-
-            # Adminga tasdiq xabari yuborish
-            await update.message.reply_text("Videoli reklama barcha foydalanuvchilarga yuborildi.")
-        except Exception as e:
-            logger.error(f"Rasmni yuborishda xatolik: {e}")
-            await update.message.reply_text("Videoni yuborishda muammo yuzaga keldi.")
-    
-    # Agar GIF yuborilgan bo'lsa
-    elif update.message.animation:
-        try:
-            message = "Adminning yuborgan GIF reklama xabari"
-            gif = update.message.animation.file_id
-            media = {'type': 'gif', 'file': gif}
-
-            # Admin yuborgan xabar matni sifatida caption (izoh) olinadi
-            message = update.message.caption if update.message.caption else "Adminning yuborgan rasmli reklama xabari"
-
-            await send_advertisement(context.bot, message, media)  # GIF yuborish
-            # Adminga tasdiq xabari yuborish
-            await update.message.reply_text("GIF reklama barcha foydalanuvchilarga yuborildi.")
-        except Exception as e:
-            logger.error(f"Rasmni yuborishda xatolik: {e}")
-            await update.message.reply_text("Rasmni yuborishda muammo yuzaga keldi.")
-    
-    # Agar hech narsa yuborilmasa
+    # Matn yoki media turiga qarab xabar yuborish
+    if message.text:
+        await send_advertisement(bot, message.text)
+        await message.answer("Reklama barcha foydalanuvchilarga yuborildi.")
+    elif message.photo:
+        media = {'type': 'photo', 'file_id': message.photo[-1].file_id}
+        await send_advertisement(bot, message.caption or "Reklama", media)
+        await message.answer("Rasmli reklama barcha foydalanuvchilarga yuborildi.")
+    elif message.video:
+        media = {'type': 'video', 'file_id': message.video.file_id}
+        await send_advertisement(bot, message.caption or "Reklama", media)
+        await message.answer("Videoli reklama barcha foydalanuvchilarga yuborildi.")
     else:
-        await update.message.reply_text("Iltimos, reklama matni yoki fayl yuboring.")
+        await message.answer("Noto'g'ri format. Faqat matn, rasm yoki video yuboring.")
 
-    return ConversationHandler.END
+    await state.clear()
 
+# Asosiy bot funksiyasini ishga tushirish
+async def main():
+    # Dispatcherni ishga tushirish
+    print("Bot is starting...")
+    await dp.start_polling(bot)
 
-
-# Asosiy bot funksiyasini yaratish
-def main() -> None:
-    application = Application.builder().token(settings.TELEGRAM_BOT_TOKEN).build()
-    application.add_handler(CallbackQueryHandler(video_download_callback, pattern="^video_download$"))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_message))
-    application.add_handler(MessageHandler(filters.COMMAND, start))
-
-    conversation_handler = ConversationHandler(
-        entry_points=[CommandHandler('broadcast', start_broadcast)],
-        states={
-            ASK_MEDIA: [MessageHandler(filters.TEXT | filters.PHOTO | filters.VIDEO | filters.ANIMATION, handle_broadcast_media)],
-            WAIT_FOR_MEDIA: [MessageHandler(filters.TEXT, handle_broadcast_media)],
-        },
-        fallbacks=[],
-    )
-    application.add_handler(conversation_handler)
-    application.add_handler(MessageHandler(filters.CONTACT, handle_contact))
-    
-    application.run_polling()
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())
