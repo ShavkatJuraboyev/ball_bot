@@ -31,7 +31,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Bot va Dispatcher obyektlarini yaratish
-session = AiohttpSession(timeout=600) 
+session = AiohttpSession(timeout=600)
 bot = Bot(token=settings.TELEGRAM_BOT_TOKEN, session=session)
 dp = Dispatcher(storage=MemoryStorage())
 
@@ -61,7 +61,7 @@ class VideoDownloadStates(StatesGroup):
 async def check_user_in_channels(user_id: int, channels: list) -> bool:
     """
     Foydalanuvchini berilgan kanallarda bor yoki yo'qligini tekshirish.
-    
+
     :param user_id: Telegram foydalanuvchi ID.
     :param channels: Kanal linklarining ro'yxati.
     :return: Agar barcha kanallarda bor bo'lsa True, aks holda False.
@@ -75,7 +75,7 @@ async def check_user_in_channels(user_id: int, channels: list) -> bool:
             chat = await bot.get_chat(f"@{channel_username}")
             # Foydalanuvchini kanalda bor yoki yo'qligini tekshirish
             member = await bot.get_chat_member(chat_id=chat.id, user_id=user_id)
-            
+
             if member.status not in ['member', 'administrator', 'creator']:
                 # Agar foydalanuvchi kanalda bo'lmasa
                 return False
@@ -110,7 +110,7 @@ async def award_points_if_joined_all(user):
 
             if created:
                 logger.info(f"Foydalanuvchi {user.telegram_id} {channel_username} kanalga qo'shildi. Ball berilmoqda.")
-                
+
                 # Foydalanuvchining ballarini yangilash
                 user_ball, _ = await get_or_create_ball(user)
                 user_ball.telegram_ball += 200 # Ball qo'shish
@@ -169,7 +169,7 @@ async def start_command(message: types.Message, state: FSMContext):
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text="Video yuklash 🔽", callback_data="video_download")],
-                [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://1cb8-195-158-8-30.ngrok-free.app"))]
+                [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://cyber-bot.uz/"))]
             ]
         )
         await message.answer("Quyidagi tugmalardan birini tanlang:", reply_markup=keyboard)
@@ -183,6 +183,7 @@ async def start_command(message: types.Message, state: FSMContext):
             one_time_keyboard=True
         )
         await message.answer("Samarqand viloyat Ichki ishlar boshqarmasi Kiberxavfsizlik bo'limi, Kiberjinoyatchilika qarshi birga kurashamiz! \n🤳Iltimos, telefon raqamingizni yuboring:", reply_markup=contact_keyboard)
+
 
 @dp.message(F.contact)
 async def handle_contact(message: types.Message, state: FSMContext):
@@ -198,12 +199,10 @@ async def handle_contact(message: types.Message, state: FSMContext):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="Video yuklash 🔽", callback_data="video_download")],
-            [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://1cb8-195-158-8-30.ngrok-free.app"))]
+            [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://cyber-bot.uz/"))]
         ]
     )
     await message.answer("Quyidagi tugmalardan birini tanlang:", reply_markup=keyboard)
-
-
 # Video yuklash tugmasi uchun handler
 @dp.callback_query(lambda callback_query: callback_query.data.startswith("video_download"))
 async def video_download_handler(callback: CallbackQuery):
@@ -225,46 +224,11 @@ async def go_back_handler(callback: CallbackQuery):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="Video yuklash 🔽", callback_data="video_download")],
-            [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://1cb8-195-158-8-30.ngrok-free.app"))]
+            [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://cyber-bot.uz/"))]
         ]
     )
     await callback.message.edit_text("Quyidagi tugmalardan birini tanlang:", reply_markup=keyboard)
 
-
-# # YouTube video yuklash funksiyasi
-# async def download_youtube_video(url, message: types.Message):
-#     ydl_opts = {
-#         'outtmpl': 'downloads/%(title)s.%(ext)s',
-#         'format': 'best',
-#     }
-#     try:
-#         with YoutubeDL(ydl_opts) as ydl:
-#             info = ydl.extract_info(url, download=True)
-#             file_path = ydl.prepare_filename(info)
-        
-#         video = FSInputFile(file_path)
-#         await message.bot.send_video(chat_id=message.chat.id, video=video)
-#         os.remove(file_path)
-#     except Exception as e:
-#         await message.answer(f"Xato yuz berdi: {e}")
-
-
-# # Facebook video yuklash funksiyasi
-# async def download_facebook_video(url, message: types.Message):
-#     ydl_opts = {
-#         'outtmpl': 'downloads/%(title)s.%(ext)s',
-#         'format': 'best',
-#     }
-#     try:
-#         with YoutubeDL(ydl_opts) as ydl:
-#             info = ydl.extract_info(url, download=True)
-#             file_path = ydl.prepare_filename(info)
-        
-#         video = FSInputFile(file_path)
-#         await message.bot.send_video(chat_id=message.chat.id, video=video)
-#         os.remove(file_path)
-#     except Exception as e:
-#         await message.answer(f"Xato yuz berdi: {e}")
 
 # Asinxron yuklab olish funksiyasi
 async def download_video(url, platform, message):
@@ -303,7 +267,7 @@ async def download_video(url, platform, message):
         logger.error(f"Xatolik: {e}")
 
 
-# Progressni ko‘rsatish uchun yordamchi funksiya
+# Progressni ko�rsatish uchun yordamchi funksiya
 def progress_hook(d):
     if d['status'] == 'downloading':
         print(f"Yuklanmoqda: {d['_percent_str']}")
@@ -315,7 +279,7 @@ async def platform_selected_handler(callback: CallbackQuery, state: FSMContext):
     await callback.answer(f"{platform} tanlandi. Endi videoning linkini yuboring.")
     await callback.message.edit_text(f"Endi {platform} uchun videoning linkini yuboring:")
 
-    # FSM holatini o‘rnatish
+    # FSM holatini o�rnatish
     await state.set_state(VideoDownloadStates.waiting_for_video_link)
 
 
@@ -335,73 +299,8 @@ async def process_link(message: types.Message, state: FSMContext):
     await message.answer(f"{platform} videosi yuklanmoqda...")
     await download_video(url, platform, message)
 
-# Linkni qayta ishlash uchun handler (faqat oddiy foydalanuvchilar uchun)
-# @dp.message(F.text.startswith("http"))
-# async def process_link(message: types.Message, state: FSMContext):
-#     current_state = await state.get_state()
-#     if current_state == VideoDownloadStates.waiting_for_video_link.state:
-#         url = message.text
-#         platform = None
 
-#         # Platformani aniqlash
-#         if "youtube.com" in url or "youtu.be" in url:
-#             platform = "YouTube"
-#         elif "instagram.com" in url:
-#             platform = "Instagram"
-#         elif "facebook.com" in url:
-#             platform = "Facebook"
 
-#         await message.answer(f"Video yuklanmoqda... ({platform})")
-#         try:
-#             if "youtube.com" in url or "youtu.be" in url:
-#                 await download_youtube_video(url, message)
-#             elif "instagram.com" in url:
-#                 await download_instagram_facebook_youtube_video(message, url)
-#             elif "facebook.com" in url:
-#                 await download_facebook_video(url, message)
-#             else:
-#                 await message.answer("Ushbu platforma uchun yuklash imkoniyati mavjud emas.")
-            
-#         except Exception as e:
-#             await message.answer(f"Xato yuz berdi: {e}")
-
-#         # Holatni tozalash
-#         await state.clear()
-#     else:
-#         await message.answer("Iltimos, avval platformani tanlang va linkni yuboring.")
-
-# Instagram va Facebook uchun yuklash funksiyasi
-async def download_instagram_facebook_youtube_video(message: types.Message, url: str):
-    ydl_opts = {
-        'outtmpl': 'downloads/%(title)s.%(ext)s',
-        'format': 'best',
-        'socket_timeout': 600,
-    }
-
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            file_path = ydl.prepare_filename(info)
-
-        # Fayl hajmini tekshirish
-        file_size = os.path.getsize(file_path) / (1024 * 1024 * 1024)  # MB ga o'tkazish
-        if file_size > 2:
-            await message.answer("Video hajmi juda katta (2 GB dan ortiq). Uni Telegram orqali yuborishning iloji yo'q.")
-            # Fayl havolasini yuboring
-            await message.answer(f"Yuklab olish uchun havola: {url}")
-        else:
-            # Faylni foydalanuvchiga yuborish
-            video = FSInputFile(file_path)
-            await message.bot.send_video(chat_id=message.chat.id, video=video)
-            await message.answer("Video muvaffaqiyatli yuklandi! 🟢")
-
-        # Faylni o'chirish
-        if os.path.exists(file_path):
-            os.remove(file_path)
-    except yt_dlp.utils.DownloadError as e:
-        await message.answer(f"Yuklashda xato yuz berdi: {e}")
-    except Exception as e:
-        await message.answer(f"Xato yuz berdi: {e}")
 
 ADMIN_ID = 1421622919  # Admin ID
 

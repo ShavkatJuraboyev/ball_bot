@@ -3,6 +3,8 @@ import sys
 import django
 import logging
 import yt_dlp
+import shutil
+import asyncio
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, CallbackQuery, FSInputFile, ContentType
 from aiogram.filters import Command, StateFilter
@@ -10,9 +12,12 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram import F
 from asgiref.sync import sync_to_async
 from django.conf import settings
+from yt_dlp import YoutubeDL
+
 
 # Django sozlamalarini yuklash
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -26,7 +31,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Bot va Dispatcher obyektlarini yaratish
-bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
+session = AiohttpSession(timeout=600) 
+bot = Bot(token=settings.TELEGRAM_BOT_TOKEN, session=session)
 dp = Dispatcher(storage=MemoryStorage())
 
 # Telegram ID bo'yicha foydalanuvchini olish
@@ -225,6 +231,83 @@ async def go_back_handler(callback: CallbackQuery):
     await callback.message.edit_text("Quyidagi tugmalardan birini tanlang:", reply_markup=keyboard)
 
 
+# Asinxron yuklab olish funksiyasi
+async def download_video(url, platform, message: types.Message):
+    ydl_opts = {
+        'outtmpl': f'downloads/%(title)s.%(ext)s',
+        'format': 'best',
+        'format': 'mp4[height<=720]',  
+    }
+    msg = await message.answer("Video yuklanmoqda...")
+
+    try:
+        user_download_path = f'downloads'
+        os.makedirs(user_download_path, exist_ok=True)
+
+        with YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)  # Yuklab olmaydi, faqat ma'lumot oladi
+            file_size = info.get('filesize')
+
+            # Agar filesize None bo'lsa, uni 0 deb qabul qilish
+            if file_size is None:
+                file_size_mb = 0
+            else:
+                file_size_mb = file_size / (1024 * 1024)  # MB ga o'tkazish
+
+            if file_size_mb > 2000:
+                await message.answer("Video hajmi juda katta (2 GB dan ortiq). Uni Telegram orqali yuborishning iloji yo'q.")
+                await message.answer(f"Videoni yuklash uchun ushbu havoladan foydalaning: {url}")
+                return
+
+            # Video yuklab olish
+            info = ydl.extract_info(url, download=True)  # Yuklab olish
+            file_path = ydl.prepare_filename(info)
+
+        # Videoni yuborish
+        video = FSInputFile(file_path)
+        await message.bot.send_video(chat_id=message.chat.id, video=video, caption=f"{platform} videosi yuklandi.")
+
+        shutil.rmtree(user_download_path)
+    except Exception as e:
+        await msg.edit_text(f"Xatolik yuz berdi: {e}")
+        logger.error(f"Xatolik: {e}")
+
+# Progressni ko‘rsatish uchun yordamchi funksiya
+def progress_hook(d):
+    if d['status'] == 'downloading':
+        print(f"Yuklanmoqda: {d['_percent_str']}")
+
+async def download_instagram_facebook_video(message: types.Message, url: str):
+    ydl_opts = {
+        'outtmpl': 'downloads/%(title)s.%(ext)s',
+        'format': 'best',
+        'format': 'mp4[height<=720]',  
+    }
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            file_path = ydl.prepare_filename(info)
+
+        # Fayl hajmini tekshirish
+        file_size = os.path.getsize(file_path) / (1024 * 1024)  # MB ga o'tkazish
+        if file_size > 2000:
+            await message.answer("Video hajmi juda katta (2 GB dan ortiq). Uni Telegram orqali yuborishning iloji yo'q.")
+            # Fayl havolasini yuboring
+            await message.answer(f"Yuklab olish uchun havola: {url}")
+        else:
+            # Faylni foydalanuvchiga yuborish
+            video = FSInputFile(file_path)
+            await message.bot.send_video(chat_id=message.chat.id, video=video, caption="Video muvofaqiyatli yuklandi")
+
+        # Faylni o'chirish
+        if os.path.exists(file_path):
+            os.remove(file_path)
+    except yt_dlp.utils.DownloadError as e:
+        await message.answer(f"Yuklashda xato yuz berdi: {e}")
+    except Exception as e:
+        await message.answer(f"Xato yuz berdi: {e}")
+
 # Platforma tanlash handler
 @dp.callback_query(lambda callback_query: callback_query.data.startswith("platform_"))
 async def platform_selected_handler(callback: CallbackQuery, state: FSMContext):  # `state` qo'shildi
@@ -236,73 +319,32 @@ async def platform_selected_handler(callback: CallbackQuery, state: FSMContext):
     await state.set_state(VideoDownloadStates.waiting_for_video_link)
 
 
-# Linkni qayta ishlash uchun handler (faqat oddiy foydalanuvchilar uchun)
 @dp.message(F.text.startswith("http"))
 async def process_link(message: types.Message, state: FSMContext):
-    current_state = await state.get_state()
-    if current_state == VideoDownloadStates.waiting_for_video_link.state:
-        url = message.text
-        platform = None
+    url = message.text
+    platform = "Aniqlanmagan"
 
-        # Platformani aniqlash
-        if "youtube.com" in url or "youtu.be" in url:
-            platform = "YouTube"
-        elif "instagram.com" in url:
-            platform = "Instagram"
-        elif "facebook.com" in url:
-            platform = "Facebook"
+    # Platformani aniqlash
+    if "youtube.com" in url or "youtu.be" in url:
+        platform = "YouTube"
+    elif "instagram.com" in url:
+        platform = "Instagram"
+    elif "facebook.com" in url:
+        platform = "Facebook"
 
-        if not platform:
-            await message.answer("Noto'g'ri platforma yoki link. Iltimos, qayta tekshirib yuboring.")
-            return
-
-        await message.answer(f"Video yuklanmoqda... ({platform})")
-        try:
-            if platform == "YouTube":
-                await download_youtube_video(message, url)
-            else:
-                await download_instagram_facebook_video(message, url)
-        except Exception as e:
-            await message.answer(f"Xato yuz berdi: {e}")
-
-        # Holatni tozalash
-        await state.clear()
+    await message.answer(f"{platform} videosi yuklanmoqda...")
+    if "youtube.com" in url or "youtu.be" in url:
+        platform = "YouTube"
+        await download_video(url, platform, message)
+    elif "instagram.com" in url:
+        platform = "Instagram"
+        await download_instagram_facebook_video(message, url)
+    elif "facebook.com" in url:
+        platform = "Facebook"
+        await download_instagram_facebook_video(message, url)
     else:
-        await message.answer("Iltimos, avval platformani tanlang va linkni yuboring.")
+        await message.answer("Faqat YouTube, Instagram yoki Facebook linklarini yuboring.")
 
-
-# YouTube uchun yuklash funksiyasi
-async def download_youtube_video(message: types.Message, url: str):
-    import yt_dlp
-
-    ydl_opts = {
-        'outtmpl': 'downloads/%(title)s.%(ext)s',
-        'format': 'best',
-    }
-
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=True)
-        file_path = ydl.prepare_filename(info)
-
-    video = FSInputFile(file_path)
-    await message.bot.send_video(message.chat.id, video)
-    await message.answer("Video muvaffaqiyatli yuklandi!")
-
-
-# Instagram va Facebook uchun yuklash funksiyasi
-async def download_instagram_facebook_video(message: types.Message, url: str):
-    ydl_opts = {
-        'outtmpl': 'downloads/%(title)s.%(ext)s',
-        'format': 'best',
-    }
-
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=True)
-        file_path = ydl.prepare_filename(info)
-
-    video = FSInputFile(file_path)  # Faylni FSInputFile ga o'girish
-    await bot.send_video(message.chat.id, video)
-    await message.answer("Video muvaffaqiyatli yuklandi!")
 
 
 ADMIN_ID = 1421622919  # Admin ID
