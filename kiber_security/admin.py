@@ -1,11 +1,12 @@
 from django.contrib import admin
-from .models import Users, Link, Ball, LinkVisit, UserChannels, Test, UserTest, Question, Answer, UserAnswer
+from .models import Users, Link, Ball, LinkVisit, UserChannels, Test, UserTest, Question, Answer, UserAnswer, BadWord
 
 admin.site.register(Users)
 admin.site.register(Link)
 admin.site.register(Ball)
 admin.site.register(LinkVisit)
 admin.site.register(UserChannels)
+admin.site.register(BadWord)
 
 # Javoblarni birlashtirib ko'rsatish uchun InlineModelAdmin
 class AnswerInline(admin.TabularInline):

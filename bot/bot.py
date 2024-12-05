@@ -6,8 +6,7 @@ import yt_dlp
 import shutil
 import asyncio
 from aiogram import Bot, Dispatcher, types, Router
-from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, CallbackQuery, FSInputFile, ContentType, ChatMemberUpdated
-from aiogram.filters.chat_member_updated import ChatMemberUpdatedFilter
+from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, CallbackQuery, FSInputFile, ContentType
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
@@ -19,14 +18,16 @@ from asgiref.sync import sync_to_async
 from django.conf import settings
 from yt_dlp import YoutubeDL
 import instaloader
+from asyncio import sleep
+from datetime import timedelta, datetime
 
 # Django sozlamalarini yuklash
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
-from kiber_security.models import Users, Ball, Link, UserChannels
-
+from kiber_security.models import Users, Ball, Link, UserChannels, BadWord
+user_messages = {}
 # Logger sozlash
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -55,6 +56,10 @@ def get_or_create_ball(user):
 @sync_to_async
 def get_telegram_links():
     return list(Link.objects.filter(link_type='telegram').values_list('url', flat=True))
+
+@sync_to_async
+def get_bad_words():
+    return list(BadWord.objects.values_list('word', flat=True))
 
 
 
@@ -225,7 +230,7 @@ async def video_download_handler(callback: CallbackQuery):
         inline_keyboard=[
             [InlineKeyboardButton(text="✅ YouTube", callback_data="platform_youtube")],
             [InlineKeyboardButton(text="✅ Instagram", callback_data="platform_instagram")],
-            [InlineKeyboardButton(text="✅ Facebook", callback_data="platform_facebook")],
+            #[InlineKeyboardButton(text="✅ Facebook", callback_data="platform_facebook")],
             [InlineKeyboardButton(text="🔙 Ortga", callback_data="go_back")]
         ]
     )
@@ -406,48 +411,106 @@ async def handle_broadcast_media(message: types.Message, state: FSMContext):
     await state.clear()
 
 
-@dp.chat_member(ChatMemberUpdatedFilter(member_status_changed=True))
-async def handle_new_member(event: ChatMemberUpdated):
-    logger.info(f"Yangi foydalanuvchi qo‘shildi: {event.from_user.full_name}")
-    # Foydalanuvchi guruhga yangi qo'shilganini tekshirish
-    if event.new_chat_member.status == "member":
-        user_id = event.from_user.id
-        channels = await get_telegram_links()
 
-        # Foydalanuvchi barcha kanallarga a'zo ekanligini tekshirish
-        is_member = await check_user_in_channels(user_id, channels)
+@router.message()
+async def handle_group_messages(message: types.Message):
+    user_id = message.from_user.id
+    chat_id = message.chat.id
+    text = message.text.lower().split()
+    BAD_WORDS = await get_bad_words()  # Xabar matnini kichik harfga o‘tkazamiz
+    # Nojo'ya so'zlarni tekshirish
+    if any(word in text for word in BAD_WORDS):
+        try:
+            # Xabarni o'chirish
+            await message.delete()
+            # Foydalanuvchini vaqtincha bloklash
+            block_time = datetime.now() + timedelta(hours=1)  # 1 soatga bloklash
+            await bot.restrict_chat_member(
+                chat_id=chat_id,
+                user_id=user_id,
+                permissions=types.ChatPermissions(can_send_messages=False),
+                until_date=block_time
+            )
 
-        if not is_member:
-            try:
-                # Guruhga yozib xabarni ko'rsatish
-                await bot.send_message(
-                    chat_id=event.chat.id,
-                    text=(
-                        f"Xush kelibsiz, {event.from_user.first_name}! 👋\n"
-                        "Guruhda yozishdan avval quyidagi kanallarga a'zo bo'lishingiz kerak:\n" +
-                        "\n".join(channels)
-                    )
-                )
-            except Exception as e:
-                logger.error(f"Guruhga xush kelibsiz xabarini yuborishda xatolik: {e}")
+            # Foydalanuvchiga ogohlantirish
+            await message.answer(
+                f"❌ Hurmatli {message.from_user.first_name}, siz nomaqbul so‘zlar ishlatdingiz. "
+                f"Siz 1 soat davomida guruhda yozishdan mahrum bo‘ldingiz!"
+            )
+        except Exception as e:
+            logger.error(f"Xabarni o'chirish yoki foydalanuvchini bloklashda xatolik: {e}")
+
+
+
+@dp.callback_query(lambda callback_query: callback_query.data.startswith("check_membership_"))
+async def check_membership_handler(callback: CallbackQuery):
+    logger.info(f"Callback data: {callback.data}")  # Log ma’lumotlarini chiqarish
+
+    try:
+        # Tugmadan foydalanuvchi ID ni ajratib olish
+        parts = callback.data.split("_")  # Callback data ni ajratish
+        if len(parts) != 3 or not parts[2].isdigit():
+            raise ValueError("Invalid callback data format")  # Format noto‘g‘ri bo‘lsa xatolik
+        callback_user_id = int(parts[2])  # User ID ni olish
+    except Exception as e:
+        logger.error(f"Invalid callback data: {callback.data}. Error: {e}")
+        await callback.answer("❌ Noto‘g‘ri tugma ma’lumotlari!", show_alert=True)
+        return
+
+    user_id = callback.from_user.id
+    if callback_user_id != user_id:
+        await callback.answer("❌ Bu tugma siz uchun emas!", show_alert=True)
+        return
+
+    channels = await get_telegram_links()
+    is_member = await check_user_in_channels(user_id, channels)
+
+    if is_member:
+        await callback.message.edit_text(
+            "✅ Kanallarga muvaffaqiyatli a’zo bo‘ldingiz! Endi guruhda yozishingiz mumkin."
+        )
+         # 5 soniyadan keyin xabarni o‘chirish
+        await sleep(5)
+        try:
+            await callback.message.delete()
+        except Exception as e:
+            logger.error(f"Xabarni o‘chirishda xatolik: {e}")
+    else:
+        await callback.answer(
+            "❌ Siz hali barcha kanallarga a’zo bo‘lmagansiz. Iltimos, avval kanallarga qo‘shiling.",
+            show_alert=True
+        )
+
 
 @router.message()
 async def handle_group_messages(message: types.Message):
     user_id = message.from_user.id
     channels = await get_telegram_links()
 
-    # Foydalanuvchini kanallarga a'zo ekanligini tekshirish
+    # Foydalanuvchi kanallarga a'zo ekanligini tekshirish
     is_member = await check_user_in_channels(user_id, channels)
-
+    first_name = message.from_user.first_name
     if not is_member:
         try:
             await message.delete()
+
+            # Foydalanuvchi uchun tugmalar
+            buttons = [
+                [InlineKeyboardButton(text=f"📢 {channel.split('/')[-1]}", url=channel)]
+                for channel in channels
+            ]
+            buttons.append([
+                InlineKeyboardButton(text="✅ Tekshirish", callback_data=f"check_membership_{user_id}")
+            ])
+            keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+
             await message.answer(
-                f"❌ Guruhda yozish uchun barcha kanallarga a'zo bo'lishingiz kerak!\nQuyidagi linklarni tekshiring:\n" +
-                "\n".join(channels)
+                f"👋 Salom {first_name}\n❌ Siz ushbu guruhda yoza olmaysiz.\n👇 Guruhda yozish uchun pastagi barcha kanallarga a’zo bo‘lishingiz kerak!",
+                reply_markup=keyboard
             )
         except Exception as e:
             logger.error(f"Xabarni o'chirishda xatolik: {e}")
+
 
 @dp.message(Command("test_channels"))
 async def test_channels(message: types.Message):

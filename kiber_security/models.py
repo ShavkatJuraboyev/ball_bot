@@ -127,3 +127,10 @@ class UserAnswer(models.Model):
 
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name} - {self.question.text} - {self.selected_answer.text}"
+
+
+class BadWord(models.Model):
+    word = models.CharField(max_length=50, null=True)
+
+    def __str__(self):
+        return f"so'z-{self.id}"
