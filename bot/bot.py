@@ -5,8 +5,9 @@ import logging
 import yt_dlp
 import shutil
 import asyncio
-from aiogram import Bot, Dispatcher, types
-from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, CallbackQuery, FSInputFile, ContentType
+from aiogram import Bot, Dispatcher, types, Router
+from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, CallbackQuery, FSInputFile, ContentType, ChatMemberUpdated
+from aiogram.filters.chat_member_updated import ChatMemberUpdatedFilter
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
@@ -27,13 +28,14 @@ django.setup()
 from kiber_security.models import Users, Ball, Link, UserChannels
 
 # Logger sozlash
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 # Bot va Dispatcher obyektlarini yaratish
 session = AiohttpSession(timeout=600) 
 bot = Bot(token=settings.TELEGRAM_BOT_TOKEN, session=session)
 dp = Dispatcher(storage=MemoryStorage())
+router = Router()
 
 # Telegram ID bo'yicha foydalanuvchini olish
 @sync_to_async
@@ -53,6 +55,8 @@ def get_or_create_ball(user):
 @sync_to_async
 def get_telegram_links():
     return list(Link.objects.filter(link_type='telegram').values_list('url', flat=True))
+
+
 
 # Holatlar uchun FSM
 class VideoDownloadStates(StatesGroup):
@@ -77,6 +81,7 @@ async def check_user_in_channels(user_id: int, channels: list) -> bool:
             member = await bot.get_chat_member(chat_id=chat.id, user_id=user_id)
             
             if member.status not in ['member', 'administrator', 'creator']:
+                logger.info(f"Foydalanuvchi {user_id} kanal {channel_username} ga aʼzo emas.")
                 # Agar foydalanuvchi kanalda bo'lmasa
                 return False
         except TelegramBadRequest as e:
@@ -84,6 +89,7 @@ async def check_user_in_channels(user_id: int, channels: list) -> bool:
             return False  # Kanalga ulanishda xato bo'lsa ham, False qaytariladi
 
     # Agar foydalanuvchi barcha kanallarda bo'lsa
+    logger.info(f"Foydalanuvchi {user_id} barcha kanallarga aʼzo.")
     return True
 
 
@@ -182,9 +188,14 @@ async def start_command(message: types.Message, state: FSMContext):
             resize_keyboard=True,
             one_time_keyboard=True
         )
-        await message.answer("""Samarqand viloyat Ichki ishlar 
+        await message.answer(
+                            """Samarqand viloyat Ichki ishlar 
                              boshqarmasi Kiberxavfsizlik bo'limi, 
-                             Kiberjinoyatchilika qarshi birga kurashamiz! \n📞Iltimos, telefon raqamingizni yuboring:""", reply_markup=contact_keyboard)
+                             Kiberjinoyatchilika qarshi birga kurashamiz! 
+                             \n📞Iltimos, telefon raqamingizni yuboring:
+                             """, 
+                             reply_markup=contact_keyboard
+                             )
 
 @dp.message(F.contact)
 async def handle_contact(message: types.Message, state: FSMContext):
@@ -394,12 +405,72 @@ async def handle_broadcast_media(message: types.Message, state: FSMContext):
 
     await state.clear()
 
-# Asosiy bot funksiyasini ishga tushirish
-async def main():
-    # Dispatcherni ishga tushirish
-    print("Bot is starting...")
-    await dp.start_polling(bot)
 
+@dp.chat_member(ChatMemberUpdatedFilter(member_status_changed=True))
+async def handle_new_member(event: ChatMemberUpdated):
+    logger.info(f"Yangi foydalanuvchi qo‘shildi: {event.from_user.full_name}")
+    # Foydalanuvchi guruhga yangi qo'shilganini tekshirish
+    if event.new_chat_member.status == "member":
+        user_id = event.from_user.id
+        channels = await get_telegram_links()
+
+        # Foydalanuvchi barcha kanallarga a'zo ekanligini tekshirish
+        is_member = await check_user_in_channels(user_id, channels)
+
+        if not is_member:
+            try:
+                # Guruhga yozib xabarni ko'rsatish
+                await bot.send_message(
+                    chat_id=event.chat.id,
+                    text=(
+                        f"Xush kelibsiz, {event.from_user.first_name}! 👋\n"
+                        "Guruhda yozishdan avval quyidagi kanallarga a'zo bo'lishingiz kerak:\n" +
+                        "\n".join(channels)
+                    )
+                )
+            except Exception as e:
+                logger.error(f"Guruhga xush kelibsiz xabarini yuborishda xatolik: {e}")
+
+@router.message()
+async def handle_group_messages(message: types.Message):
+    user_id = message.from_user.id
+    channels = await get_telegram_links()
+
+    # Foydalanuvchini kanallarga a'zo ekanligini tekshirish
+    is_member = await check_user_in_channels(user_id, channels)
+
+    if not is_member:
+        try:
+            await message.delete()
+            await message.answer(
+                f"❌ Guruhda yozish uchun barcha kanallarga a'zo bo'lishingiz kerak!\nQuyidagi linklarni tekshiring:\n" +
+                "\n".join(channels)
+            )
+        except Exception as e:
+            logger.error(f"Xabarni o'chirishda xatolik: {e}")
+
+@dp.message(Command("test_channels"))
+async def test_channels(message: types.Message):
+    user_id = message.from_user.id
+    channels = await get_telegram_links()
+    is_member = await check_user_in_channels(user_id, channels)
+    await message.answer(f"Kanallarga a'zo: {is_member}")
+
+
+@dp.message(Command("check_channels"))
+async def check_channels_command(message: types.Message):
+    channels = await get_telegram_links()
+    await message.answer(f"Kanal havolalari: {channels}")
+
+
+# Asosiy funksiyani yangilash
+async def main():
+    dp.include_router(router)
+    print("Bot ishga tushmoqda...")
+    try:
+        await dp.start_polling(bot)
+    finally:
+        await session.close()  # Sessiyani yopish
 if __name__ == "__main__":
     import asyncio
     asyncio.run(main())
