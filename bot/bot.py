@@ -2,7 +2,6 @@ import os
 import sys
 import django
 import logging
-import yt_dlp
 import shutil
 import asyncio
 from aiogram import Bot, Dispatcher, types, Router
@@ -193,14 +192,7 @@ async def start_command(message: types.Message, state: FSMContext):
             resize_keyboard=True,
             one_time_keyboard=True
         )
-        await message.answer(
-                            """Samarqand viloyat Ichki ishlar 
-                             boshqarmasi Kiberxavfsizlik bo'limi, 
-                             Kiberjinoyatchilika qarshi birga kurashamiz! 
-                             \n📞Iltimos, telefon raqamingizni yuboring:
-                             """, 
-                             reply_markup=contact_keyboard
-                             )
+        await message.answer("""👋 Assalomu alaykum! Botga xush kelibsiz.\nSamarqand viloyat Ichki ishlar boshqarmasi Kiberxavfsizlik bo'limi, Kiberjinoyatchilika qarshi birga kurashamiz! \n📞Iltimos, telefon raqamingizni yuboring: """, reply_markup=contact_keyboard)
 
 @dp.message(F.contact)
 async def handle_contact(message: types.Message, state: FSMContext):
@@ -412,33 +404,33 @@ async def handle_broadcast_media(message: types.Message, state: FSMContext):
 
 
 
-@router.message()
-async def handle_group_messages(message: types.Message):
-    user_id = message.from_user.id
-    chat_id = message.chat.id
-    text = message.text.lower().split()
-    BAD_WORDS = await get_bad_words()  # Xabar matnini kichik harfga o‘tkazamiz
-    # Nojo'ya so'zlarni tekshirish
-    if any(word in text for word in BAD_WORDS):
-        try:
-            # Xabarni o'chirish
-            await message.delete()
-            # Foydalanuvchini vaqtincha bloklash
-            block_time = datetime.now() + timedelta(hours=1)  # 1 soatga bloklash
-            await bot.restrict_chat_member(
-                chat_id=chat_id,
-                user_id=user_id,
-                permissions=types.ChatPermissions(can_send_messages=False),
-                until_date=block_time
-            )
+# @router.message()
+# async def handle_group_messages(message: types.Message):
+#     user_id = message.from_user.id
+#     chat_id = message.chat.id
+#     text = message.text.lower().split()
+#     BAD_WORDS = await get_bad_words()  # Xabar matnini kichik harfga o‘tkazamiz
+#     # Nojo'ya so'zlarni tekshirish
+#     if any(word in text for word in BAD_WORDS):
+#         try:
+#             # Xabarni o'chirish
+#             await message.delete()
+#             # Foydalanuvchini vaqtincha bloklash
+#             block_time = datetime.now() + timedelta(hours=1)  # 1 soatga bloklash
+#             await bot.restrict_chat_member(
+#                 chat_id=chat_id,
+#                 user_id=user_id,
+#                 permissions=types.ChatPermissions(can_send_messages=False),
+#                 until_date=block_time
+#             )
 
-            # Foydalanuvchiga ogohlantirish
-            await message.answer(
-                f"❌ Hurmatli {message.from_user.first_name}, siz nomaqbul so‘zlar ishlatdingiz. "
-                f"Siz 1 soat davomida guruhda yozishdan mahrum bo‘ldingiz!"
-            )
-        except Exception as e:
-            logger.error(f"Xabarni o'chirish yoki foydalanuvchini bloklashda xatolik: {e}")
+#             # Foydalanuvchiga ogohlantirish
+#             await message.answer(
+#                 f"❌ Hurmatli {message.from_user.first_name}, siz nomaqbul so‘zlar ishlatdingiz. "
+#                 f"Siz 1 soat davomida guruhda yozishdan mahrum bo‘ldingiz!"
+#             )
+#         except Exception as e:
+#             logger.error(f"Xabarni o'chirish yoki foydalanuvchini bloklashda xatolik: {e}")
 
 
 
@@ -510,6 +502,31 @@ async def handle_group_messages(message: types.Message):
             )
         except Exception as e:
             logger.error(f"Xabarni o'chirishda xatolik: {e}")
+
+    chat_id = message.chat.id
+    text = message.text.lower().split()
+    BAD_WORDS = await get_bad_words()  # Xabar matnini kichik harfga o‘tkazamiz
+    # Nojo'ya so'zlarni tekshirish
+    if any(word in text for word in BAD_WORDS):
+        try:
+            # Xabarni o'chirish
+            await message.delete()
+            # Foydalanuvchini vaqtincha bloklash
+            block_time = datetime.now() + timedelta(hours=1)  # 1 soatga bloklash
+            await bot.restrict_chat_member(
+                chat_id=chat_id,
+                user_id=user_id,
+                permissions=types.ChatPermissions(can_send_messages=False),
+                until_date=block_time
+            )
+
+            # Foydalanuvchiga ogohlantirish
+            await message.answer(
+                f"❌ Hurmatli {message.from_user.first_name}, siz nomaqbul so‘zlar ishlatdingiz. "
+                f"Siz 1 soat davomida guruhda yozishdan mahrum bo‘ldingiz!"
+            )
+        except Exception as e:
+            logger.error(f"Xabarni o'chirish yoki foydalanuvchini bloklashda xatolik: {e}")
 
 
 @dp.message(Command("test_channels"))

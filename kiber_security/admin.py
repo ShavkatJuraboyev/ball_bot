@@ -6,7 +6,8 @@ admin.site.register(Link)
 admin.site.register(Ball)
 admin.site.register(LinkVisit)
 admin.site.register(UserChannels)
-admin.site.register(BadWord)
+
+
 
 # Javoblarni birlashtirib ko'rsatish uchun InlineModelAdmin
 class AnswerInline(admin.TabularInline):
