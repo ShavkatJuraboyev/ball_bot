@@ -134,3 +134,9 @@ class BadWord(models.Model):
 
     def __str__(self):
         return f"so'z-{self.id}"
+    
+class GroupId(models.Model):
+    groupid = models.IntegerField(null=True, unique=True)
+
+    def __str__(self):
+        return f"{self.groupid}"

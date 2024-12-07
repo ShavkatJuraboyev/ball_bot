@@ -25,7 +25,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
-from kiber_security.models import Users, Ball, Link, UserChannels, BadWord
+from kiber_security.models import Users, Ball, Link, UserChannels, BadWord, GroupId
 user_messages = {}
 # Logger sozlash
 logging.basicConfig(level=logging.DEBUG)
@@ -60,7 +60,9 @@ def get_telegram_links():
 def get_bad_words():
     return list(BadWord.objects.values_list('word', flat=True))
 
-
+@sync_to_async
+def get_groupid():
+    return list(GroupId.objects.values_list('groupid', flat=True))
 
 # Holatlar uchun FSM
 class VideoDownloadStates(StatesGroup):
@@ -179,7 +181,7 @@ async def start_command(message: types.Message, state: FSMContext):
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text="Video yuklash ⏳", callback_data="video_download")],
-                [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://1cb8-195-158-8-30.ngrok-free.app"))]
+                [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://4b55-195-158-8-30.ngrok-free.app"))]
             ]
         )
         await message.answer("Quyidagi tugmalardan birini tanlang:", reply_markup=keyboard)
@@ -208,7 +210,7 @@ async def handle_contact(message: types.Message, state: FSMContext):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="Video yuklash ⏳", callback_data="video_download")],
-            [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://1cb8-195-158-8-30.ngrok-free.app"))]
+            [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://4b55-195-158-8-30.ngrok-free.app"))]
         ]
     )
     await message.answer("Quyidagi tugmalardan birini tanlang:", reply_markup=keyboard)
@@ -235,7 +237,7 @@ async def go_back_handler(callback: CallbackQuery):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="Video yuklash ⏳", callback_data="video_download")],
-            [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://1cb8-195-158-8-30.ngrok-free.app"))]
+            [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://4b55-195-158-8-30.ngrok-free.app"))]
         ]
     )
     await callback.message.edit_text("Quyidagi tugmalardan birini tanlang:", reply_markup=keyboard)
@@ -541,6 +543,28 @@ async def test_channels(message: types.Message):
 async def check_channels_command(message: types.Message):
     channels = await get_telegram_links()
     await message.answer(f"Kanal havolalari: {channels}")
+
+CHANNEL_USERNAME = '@python_dasturlash1'
+async def forward_to_user(message: types.Message):
+    group_ids = await get_group_id()
+    
+    # Agar xabar kanalga yuborilgan bo'lsa
+    for group_id in group_ids:
+        if message.chat.username == CHANNEL_USERNAME:
+            # Xabarni sizga yuborish
+            await bot.send_message(chat_id=group_id, text=message.text or "Kanalda yangi xabar: No text available.")
+            await message.reply("Xabar sizga yuborildi!")
+
+
+# Guruh ID sini olish uchun /add komandasi
+@dp.message(F.chat.type.in_(["group", "supergroup"]) & (F.text == "/group_id"))
+async def get_group_id(message: types.Message):
+    try:
+        await message.answer(f"Guruh ID: {message.chat.id}")
+        logger.info(f"Guruh ID si olindi: {message.chat.id}")
+    except Exception as e:
+        logger.error(f"Guruh ID ni olishda xatolik yuz berdi: {e}")
+
 
 
 # Asosiy funksiyani yangilash

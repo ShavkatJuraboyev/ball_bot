@@ -1,11 +1,13 @@
 from django.contrib import admin
-from .models import Users, Link, Ball, LinkVisit, UserChannels, Test, UserTest, Question, Answer, UserAnswer, BadWord
+from .models import Users, Link, Ball, LinkVisit, UserChannels, Test, UserTest, Question, Answer, UserAnswer, BadWord, GroupId
 
 admin.site.register(Users)
 admin.site.register(Link)
 admin.site.register(Ball)
 admin.site.register(LinkVisit)
 admin.site.register(UserChannels)
+admin.site.register(BadWord)
+admin.site.register(GroupId)
 
 
 
