@@ -75,7 +75,6 @@ async def award_points_if_joined_all(user):
 
 @router.message(Command("start"))
 async def start_command(message: types.Message, state: FSMContext, bot: Bot):
-    print(message.chat.type)
     if message.chat.type == "private":
         user_data = {
             'telegram_id': message.from_user.id,
@@ -334,7 +333,6 @@ async def check_membership_handler(callback: CallbackQuery):
 
 @router.message()
 async def handle_group_messages(message: types.Message):
-    print(message.chat.type)
     # Faqat guruh chatlarida ishlashi uchun tekshirish
     if message.chat.type not in ["group", "supergroup"]:
         return  # Shaxsiy chatlar yoki boshqa turlar uchun hech narsa qilmaydi
@@ -345,6 +343,7 @@ async def handle_group_messages(message: types.Message):
     # Foydalanuvchi kanallarga a'zo ekanligini tekshirish
     is_member = await check_user_in_channels(user_id, channels)
     first_name = message.from_user.first_name
+
     if not is_member:
         try:
             await message.delete()

@@ -37,6 +37,7 @@ bot = Bot(token=settings.TELEGRAM_BOT_TOKEN, session=session)
 dp = Dispatcher(storage=MemoryStorage())
 router = Router()
 
+
 # Telegram ID bo'yicha foydalanuvchini olish
 @sync_to_async
 def get_user_by_telegram_id(telegram_id):
@@ -408,7 +409,6 @@ async def handle_broadcast_media(message: types.Message, state: FSMContext):
     await state.clear()
 
 
-
 @dp.message(Command("post"))
 async def start_posting(message: types.Message, state: FSMContext):
     if message.from_user.id != ADMIN_ID:
@@ -493,6 +493,8 @@ async def check_membership_handler(callback: CallbackQuery):
 
 @router.message()
 async def handle_group_messages(message: types.Message):
+    # if message.chat.type not in ["group", "supergroup"]:
+    #     return  
     user_id = message.from_user.id
     channels = await get_telegram_links()
 
@@ -546,7 +548,11 @@ async def handle_group_messages(message: types.Message):
             logger.error(f"Xabarni o'chirish yoki foydalanuvchini bloklashda xatolik: {e}")
 
 
-
+# # Guruhga yangi foydalanuvchi qo'shilganda salomlashish
+# @dp.message(F.new_chat_members)
+# async def welcome_new_member(message: Message):
+#     new_members = ", ".join([user.first_name for user in message.new_chat_members])
+#     await message.answer(f"Xush kelibsiz, {new_members}! 😊")
 
 
 # Asosiy funksiyani yangilash
