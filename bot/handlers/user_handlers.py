@@ -8,7 +8,6 @@ from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardBut
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from aiogram.client.session.aiohttp import AiohttpSession
 from datetime import timedelta, datetime
 from aiogram import F
 from asgiref.sync import sync_to_async
@@ -24,9 +23,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
-from kiber_security.models import Users, Ball, Link, UserChannels, BadWord, GroupId
-session = AiohttpSession(timeout=600) 
-bot = Bot(token=settings.TELEGRAM_BOT_TOKEN, session=session)
+from kiber_security.models import Users, UserChannels
+
 # Logger sozlash
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -44,23 +42,20 @@ async def award_points_if_joined_all(user):
     # Telegram kanallari ro'yxatini olish
     channels = await get_telegram_links()
     logger.info(f"Foydalanuvchi {user.telegram_id} uchun barcha kerakli kanallarni tekshirish.")
-
+    print(channels)
     # Foydalanuvchini barcha kanallarda borligini tekshirish
     is_member = await check_user_in_channels(user.telegram_id, channels)
 
     if is_member:
-        for channel_username in channels:
+        for channel_username, ball in channels:
             # Kanalda yangi foydalanuvchini ro'yxatdan o'tkazish
             user_channel, created = await sync_to_async(UserChannels.objects.get_or_create)(
                 user=user, channel_username=channel_username
             )
-
             if created:
-                logger.info(f"Foydalanuvchi {user.telegram_id} {channel_username} kanalga qo'shildi. Ball berilmoqda.")
-                
                 # Foydalanuvchining ballarini yangilash
                 user_ball, _ = await get_or_create_ball(user)
-                user_ball.telegram_ball += 200 # Ball qo'shish
+                user_ball.telegram_ball += ball # Ball qo'shish
                 user_ball.all_ball = (
                     user_ball.youtube_ball +
                     user_ball.telegram_ball +
@@ -75,58 +70,58 @@ async def award_points_if_joined_all(user):
 
 @router.message(Command("start"))
 async def start_command(message: types.Message, state: FSMContext, bot: Bot):
-    if message.chat.type == "private":
-        user_data = {
-            'telegram_id': message.from_user.id,
-            'first_name': message.from_user.first_name or ' ',
-            'last_name': message.from_user.last_name or ' ',
-            'username_link': message.from_user.username or ' ',
-        }
+    # if message.chat.type == "private":
+    user_data = {
+        'telegram_id': message.from_user.id,
+        'first_name': message.from_user.first_name or ' ',
+        'last_name': message.from_user.last_name or ' ',
+        'username_link': message.from_user.username or ' ',
+    }
 
-        # Taklif kodini olish (start komandasidan keyingi parametr)
-        args = message.text.split()
-        referral_code = args[1] if len(args) > 1 else None
+    # Taklif kodini olish (start komandasidan keyingi parametr)
+    args = message.text.split()
+    referral_code = args[1] if len(args) > 1 else None
 
-        # Foydalanuvchini yaratish yoki topish
-        user, created = await get_or_create_user(user_data)
+    # Foydalanuvchini yaratish yoki topish
+    user, created = await get_or_create_user(user_data)
 
-        # Foydalanuvchi hali botga birinchi marta kirgan bo'lsa va taklif kodi berilgan bo'lsa
-        if created and referral_code and not user.referred_by:
-            referrer = await sync_to_async(Users.objects.filter(referral_code=referral_code).first)()
-            if referrer:
-                user.referred_by = referrer
-                user.is_first_start = False
-                await sync_to_async(user.save)()
+    # Foydalanuvchi hali botga birinchi marta kirgan bo'lsa va taklif kodi berilgan bo'lsa
+    if created and referral_code and not user.referred_by:
+        referrer = await sync_to_async(Users.objects.filter(referral_code=referral_code).first)()
+        if referrer:
+            user.referred_by = referrer
+            user.is_first_start = False
+            await sync_to_async(user.save)()
 
-                referrer_ball, _ = await get_or_create_ball(referrer)
-                referrer_ball.friends_ball += 1000
-                referrer_ball.all_ball = (
-                    referrer_ball.youtube_ball + referrer_ball.telegram_ball +
-                    referrer_ball.instagram_ball + referrer_ball.friends_ball
-                )
-                await sync_to_async(referrer_ball.save)()
-
-        await award_points_if_joined_all(user)
-        # Telefon raqami mavjudligini tekshirish
-        if user.phone_number:
-            # Telefon raqami avval yuborilgan bo'lsa, inline tugmalarni ko'rsatish
-            keyboard = InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [InlineKeyboardButton(text="Video yuklash ⏳", callback_data="video_download")],
-                    [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://4b55-195-158-8-30.ngrok-free.app"))]
-                ]
+            referrer_ball, _ = await get_or_create_ball(referrer)
+            referrer_ball.friends_ball += 1000
+            referrer_ball.all_ball = (
+                referrer_ball.youtube_ball + referrer_ball.telegram_ball +
+                referrer_ball.instagram_ball + referrer_ball.friends_ball
             )
-            await message.answer("Endi siz ilova orqali sovg'alar yutub olishingiz mumkin. \nVieo yuklashda siz Youtube va Instagram dan videolarni qiyinchiliksiz yuklash imkoniyati bor:", reply_markup=keyboard)
-        else:
-            # Telefon raqami hali yuborilmagan bo'lsa, so'rash
-            contact_keyboard = ReplyKeyboardMarkup(
-                keyboard=[
-                    [KeyboardButton(text="📞Telefon raqamni ulashish", request_contact=True)]
-                ],
-                resize_keyboard=True,
-                one_time_keyboard=True
-            )
-            await message.answer("""👋 Assalomu alaykum! Botga xush kelibsiz.\nSamarqand viloyat Ichki ishlar boshqarmasi Kiberxavfsizlik bo'limi, Kiberjinoyatchilika qarshi birga kurashamiz! \n📞Iltimos, telefon raqamingizni yuboring: """, reply_markup=contact_keyboard)
+            await sync_to_async(referrer_ball.save)()
+
+    await award_points_if_joined_all(user)
+    # Telefon raqami mavjudligini tekshirish
+    if user.phone_number:
+        # Telefon raqami avval yuborilgan bo'lsa, inline tugmalarni ko'rsatish
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="Video yuklash ⏳", callback_data="video_download")],
+                [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://ca19-195-158-8-30.ngrok-free.app"))]
+            ]
+        )
+        await message.answer("Endi siz ilova orqali sovg'alar yutub olishingiz mumkin. \nVieo yuklashda siz Youtube va Instagram dan videolarni qiyinchiliksiz yuklash imkoniyati bor:", reply_markup=keyboard)
+    else:
+        # Telefon raqami hali yuborilmagan bo'lsa, so'rash
+        contact_keyboard = ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text="📞Telefon raqamni ulashish", request_contact=True)]
+            ],
+            resize_keyboard=True,
+            one_time_keyboard=True
+        )
+        await message.answer("""👋 Assalomu alaykum! Botga xush kelibsiz.\nSamarqand viloyat Ichki ishlar boshqarmasi Kiberxavfsizlik bo'limi, Kiberjinoyatchilika qarshi birga kurashamiz! \n📞Iltimos, telefon raqamingizni yuboring: """, reply_markup=contact_keyboard)
 
 
 @router.message(lambda msg: msg.contact)
@@ -143,24 +138,26 @@ async def handle_contact(message: types.Message, state: FSMContext):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="Video yuklash ⏳", callback_data="video_download")],
-            [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://4b55-195-158-8-30.ngrok-free.app"))]
+            [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://ca19-195-158-8-30.ngrok-free.app"))]
         ]
     )
     await message.answer("Endi siz ilova orqali sovg'alar yutub olishingiz mumkin. \nVieo yuklashda siz Youtube va Instagram dan videolarni qiyinchiliksiz yuklash imkoniyati bor", reply_markup=keyboard)
 
+
 # Video yuklash tugmasi uchun handler
 @router.callback_query(lambda c: c.data and c.data.startswith("video_download"))
 async def video_download_handler(callback: CallbackQuery):
-    await callback.message.edit_text("Videoning platformasini tanlang:")
-    platform_keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="✅ YouTube", callback_data="platform_youtube")],
-            [InlineKeyboardButton(text="✅ Instagram", callback_data="platform_instagram")],
-            #[InlineKeyboardButton(text="✅ Facebook", callback_data="platform_facebook")],
-            [InlineKeyboardButton(text="🔙 Ortga", callback_data="go_back")]
-        ]
-    )
-    await callback.message.edit_reply_markup(reply_markup=platform_keyboard)
+    if callback.message.chat.type == "private":
+        await callback.message.edit_text("Videoning platformasini tanlang:")
+        platform_keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="✅ YouTube", callback_data="platform_youtube")],
+                [InlineKeyboardButton(text="✅ Instagram", callback_data="platform_instagram")],
+                #[InlineKeyboardButton(text="✅ Facebook", callback_data="platform_facebook")],
+                [InlineKeyboardButton(text="🔙 Ortga", callback_data="go_back")]
+            ]
+        )
+        await callback.message.edit_reply_markup(reply_markup=platform_keyboard)
 
 
 @router.callback_query(lambda callback_query: callback_query.data == "go_back")
@@ -169,7 +166,7 @@ async def go_back_handler(callback: CallbackQuery):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="Video yuklash ⏳", callback_data="video_download")],
-            [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://4b55-195-158-8-30.ngrok-free.app"))]
+            [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://ca19-195-158-8-30.ngrok-free.app"))]
         ]
     )
     await callback.message.edit_text("Quyidagi tugmalardan birini tanlang:", reply_markup=keyboard)
@@ -265,35 +262,34 @@ async def platform_selected_handler(callback: CallbackQuery, state: FSMContext):
 
 @router.message(F.text.startswith("http"))
 async def process_link(message: types.Message, state: FSMContext):
-    url = message.text
-    platform = "Aniqlanmagan"
+    if message.chat.type == "private":
+        url = message.text
+        platform = "Aniqlanmagan"
 
-    # Platformani aniqlash
-    if "youtube.com" in url or "youtu.be" in url:
-        platform = "YouTube"
-    elif "instagram.com" in url:
-        platform = "Instagram"
-    elif "facebook.com" in url:
-        platform = "Facebook"
+        # Platformani aniqlash
+        if "youtube.com" in url or "youtu.be" in url:
+            platform = "YouTube"
+        elif "instagram.com" in url:
+            platform = "Instagram"
+        elif "facebook.com" in url:
+            platform = "Facebook"
 
-    await message.answer(f"{platform} videosi yuklanmoqda... 🚀")
-    if "youtube.com" in url or "youtu.be" in url:
-        platform = "YouTube"
-        await download_youtube_video(url, platform, message)
-    elif "instagram.com" in url:
-        platform = "Instagram"
-        await download_instagram_video(message, url)
-    elif "facebook.com" in url:
-        platform = "Facebook"
-        await download_youtube_video(url, platform, message)
-    else:
-        await message.answer("❌ Faqat YouTube, Instagram yoki Facebook linklarini yuboring.")
+        await message.answer(f"{platform} videosi yuklanmoqda... 🚀")
+        if "youtube.com" in url or "youtu.be" in url:
+            platform = "YouTube"
+            await download_youtube_video(url, platform, message)
+        elif "instagram.com" in url:
+            platform = "Instagram"
+            await download_instagram_video(message, url)
+        elif "facebook.com" in url:
+            platform = "Facebook"
+            await download_youtube_video(url, platform, message)
+        else:
+            await message.answer("❌ Faqat YouTube, Instagram yoki Facebook linklarini yuboring.")
 
 
 @router.callback_query(lambda callback_query: callback_query.data.startswith("check_membership_"))
 async def check_membership_handler(callback: CallbackQuery):
-    logger.info(f"Callback data: {callback.data}")  # Log ma’lumotlarini chiqarish
-
     try:
         # Tugmadan foydalanuvchi ID ni ajratib olish
         parts = callback.data.split("_")  # Callback data ni ajratish
@@ -332,11 +328,8 @@ async def check_membership_handler(callback: CallbackQuery):
 
 
 @router.message()
-async def handle_group_messages(message: types.Message):
-    # Faqat guruh chatlarida ishlashi uchun tekshirish
-    if message.chat.type not in ["group", "supergroup"]:
-        return  # Shaxsiy chatlar yoki boshqa turlar uchun hech narsa qilmaydi
-    
+async def handle_group_messages(message: types.Message, bot: Bot):
+
     user_id = message.from_user.id
     channels = await get_telegram_links()
 
@@ -344,7 +337,9 @@ async def handle_group_messages(message: types.Message):
     is_member = await check_user_in_channels(user_id, channels)
     first_name = message.from_user.first_name
 
-    if not is_member:
+    # Agar admin bo'lsa yoki foydalanuvchi kanal nomidan yozayotgan bo'lsa, bot "kanallarga qo'shiling" deb javob bermasligi kerak
+    
+    if not is_member and first_name not in ["Channel", "Telegram", "Group"]:
         try:
             await message.delete()
 
@@ -353,20 +348,19 @@ async def handle_group_messages(message: types.Message):
                 [InlineKeyboardButton(text=f"📢 {channel.split('/')[-1]}", url=channel)]
                 for channel in channels
             ]
-            buttons.append([
-                InlineKeyboardButton(text="✅ Tekshirish", callback_data=f"check_membership_{user_id}")
-            ])
+            buttons.append([InlineKeyboardButton(text="✅ Tekshirish", callback_data=f"check_membership_{user_id}")])
             keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
             await message.answer(
-                f"👋 Salom {first_name}\n❌ Siz ushbu guruhda yoza olmaysiz.\n👇 Guruhda yozish uchun pastagi barcha kanallarga a’zo bo‘lishingiz kerak!",
+                f"👋 Salom {first_name}\n❌ Siz ushbu guruhda yoza olmaysiz.\n👇 Guruhda yozish uchun pastdagi barcha kanallarga a’zo bo‘lishingiz kerak!",
                 reply_markup=keyboard
             )
-            
+            await sleep(10)
         except Exception as e:
             logger.error(f"Xabarni o'chirishda xatolik: {e}")
         await sleep(10)
 
+    # Nojo'ya so'zlarni tekshirish
     chat_id = message.chat.id
     text = message.text.lower().split()
     BAD_WORDS = await get_bad_words()  # Xabar matnini kichik harfga o‘tkazamiz
@@ -376,7 +370,7 @@ async def handle_group_messages(message: types.Message):
             # Xabarni o'chirish
             await message.delete()
             # Foydalanuvchini vaqtincha bloklash
-            block_time = datetime.now() + timedelta(hours=1)  # 1 soatga bloklash
+            block_time = datetime.now() + timedelta(minutes=15)  # 1 soatga bloklash
             await bot.restrict_chat_member(
                 chat_id=chat_id,
                 user_id=user_id,
@@ -387,12 +381,10 @@ async def handle_group_messages(message: types.Message):
             # Foydalanuvchiga ogohlantirish
             await message.answer(
                 f"❌ Hurmatli {message.from_user.first_name}, siz nomaqbul so‘zlar ishlatdingiz. "
-                f"Siz 1 soat davomida guruhda yozishdan mahrum bo‘ldingiz!"
+                f"Siz 15 minut davomida guruhda yozishdan mahrum bo‘ldingiz!"
             )
         except Exception as e:
             logger.error(f"Xabarni o'chirish yoki foydalanuvchini bloklashda xatolik: {e}")
-        await sleep(10)
-
 
 def register_user_handlers(dp: Dispatcher, bot: Bot):
     dp.include_router(router)

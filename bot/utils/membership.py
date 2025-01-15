@@ -11,7 +11,7 @@ async def check_user_in_channels(user_id: int, channels: list) -> bool:
     :return: Agar barcha kanallarda bor bo'lsa True, aks holda False.
     """
     bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
-    channel_usernames = [link.split("/")[-1] for link in channels]  # Kanal username'larini olish
+    channel_usernames = [link.split("/")[-1] for link, _ in channels]  # Kanal username'larini olish
 
     for channel_username in channel_usernames:
         try:
