@@ -1,6 +1,7 @@
 from django.utils.timezone import now
 from django.db import models
 import uuid
+from django.templatetags.static import static
 
 class Users(models.Model):
     telegram_id = models.CharField(max_length=100, unique=True)
@@ -12,6 +13,8 @@ class Users(models.Model):
     referred_by = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True)
     referred = models.BooleanField(default=False)
     is_first_start = models.BooleanField(default=True)  # Foydalanuvchi botga birinchi marta start bosganligini belgilaydi
+    image = models.ImageField(upload_to='users/prize/', null=True, blank=True)
+    profile_img = models.ImageField(upload_to='users/image/', null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.referral_code:
@@ -21,6 +24,14 @@ class Users(models.Model):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
+    
+    @property
+    def get_user_image(self):
+        return self.image.url if self.image else static('images/sovga.png')
+    
+    @property
+    def get_user_image_profile(self):
+        return self.profile_img.url if self.profile_img else static('images/person.png')
 
 class UserChannels(models.Model):
     user = models.ForeignKey(Users, on_delete=models.CASCADE)
@@ -47,7 +58,7 @@ class Link(models.Model):
         return self.description or self.url
 
 class Ball(models.Model):
-    user = models.ForeignKey(Users, on_delete=models.CASCADE)
+    user = models.ForeignKey(Users, on_delete=models.CASCADE, null=False)
     youtube_ball = models.BigIntegerField(default=0)
     telegram_ball = models.BigIntegerField(default=0)
     instagram_ball = models.BigIntegerField(default=0)

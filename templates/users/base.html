@@ -13,9 +13,17 @@
     {% block content %}
     
     {% endblock content %}
+    <div class="share-links oxiri">
+        <a class="logo-share">
+            <div>
+                <div class="friends"></div>
+                <span class="olmas"></span> <span class="priz"></span>
+            </div>
+        </a>
+    </div>
     {% include 'users/footer.html' %}
 
-    <script>
+    <!-- <script>
         Telegram.WebApp.ready();
 
         const initData = Telegram.WebApp.initData;
@@ -34,7 +42,7 @@
             document.getElementById("user-info").innerText = `${data.first_name} ${data.last_name}`;
         })
         .catch(error => console.error('Xatolik:', error));
-    </script>
+    </script> -->
     
 </body>
 </html>

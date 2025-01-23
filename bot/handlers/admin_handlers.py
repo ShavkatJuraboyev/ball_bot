@@ -50,7 +50,7 @@ async def admin_start_commad(message: types.Message, bot: Bot):
     keyboard = generate_admin_buttons()
     await message.answer(text="Quydagilardan birini tanlang", reply_markup=keyboard)
 
-
+@router.callback_query(lambda c: c.data and c.data.startswith('back_admin'))
 async def admin_start_back(callback: types.CallbackQuery):
     if not is_admin(callback.message.chat.id):
         await callback.answer("❌ Ushbu buyruq faqat adminlar uchun!")
@@ -61,6 +61,7 @@ async def admin_start_back(callback: types.CallbackQuery):
     await callback.message.answer(text="Quydagilardan birini tanlang", reply_markup=keyboard)
     await callback.message.delete()
 
+@router.callback_query(lambda c: c.data and c.data.startswith('all_users'))
 async def users_all(callback: types.CallbackQuery, page: int = 1):
     if not is_admin(callback.message.chat.id):
         await callback.answer("❌ Ushbu buyruq faqat adminlar uchun!")
@@ -105,16 +106,17 @@ async def users_all(callback: types.CallbackQuery, page: int = 1):
     await callback.message.answer(text=f"📊 Telegram foydalanuvchilari statistikas- Sahifa {page}", reply_markup=keyboard)
     await callback.message.delete()
 
-
+@router.callback_query(lambda c: c.data and c.data.startswith('keyingi_'))
 async def next_page(callback: types.CallbackQuery):
     page = int(callback.data.split('_')[1])  # keyingi_{page} dan sahifa raqamini olish
     await users_all(callback, page)
 
-
+@router.callback_query(lambda c: c.data and c.data.startswith('oldingi_'))
 async def prev_page(callback: types.CallbackQuery):
     page = int(callback.data.split('_')[1])  # oldingi_{page} dan sahifa raqamini olish
     await users_all(callback, page)
 
+@router.callback_query(lambda c: c.data and c.data.startswith('all_channels'))
 async def channels_all(callback: types.CallbackQuery):
     if not is_admin(callback.message.chat.id):
         await callback.answer("❌ Ushbu buyruq faqat adminlar uchun!")
@@ -141,6 +143,7 @@ async def channels_all(callback: types.CallbackQuery):
     await callback.message.answer(text="Barcha telegram kannallar", reply_markup=keyboard)
     await callback.message.delete()
 
+@router.callback_query(lambda c: c.data and c.data.startswith('post_users'))
 async def users_post(callback: types.CallbackQuery):
     if not is_admin(callback.message.chat.id):
         await callback.answer("❌ Ushbu buyruq faqat adminlar uchun!")
@@ -158,6 +161,7 @@ async def users_post(callback: types.CallbackQuery):
         parse_mode="Markdown", reply_markup=keyboard
     )
 
+@router.callback_query(lambda c: c.data and c.data.startswith('post_channels'))
 async def chanels_post(callback: types.CallbackQuery):
     if not is_admin(callback.message.chat.id):
         await callback.answer("❌ Ushbu buyruq faqat adminlar uchun!")
@@ -174,6 +178,8 @@ async def chanels_post(callback: types.CallbackQuery):
         f"Masalan:\n/post",
         parse_mode="Markdown", reply_markup=keyboard
     )
+
+
 
 registered_channels = {}
 
@@ -310,36 +316,3 @@ async def handle_post_content(message: types.Message, state: FSMContext, bot: Bo
 
 def register_admin_handlers(dp: Dispatcher, bot: Bot):
     dp.include_router(router)
-
-    router.callback_query.register(
-        admin_start_back,
-        lambda c: c.data and c.data.startswith('back_admin')
-    )
-
-    router.callback_query.register(
-        users_all,
-        lambda c: c.data and c.data.startswith("all_users") 
-    )
-
-    router.callback_query.register(
-        channels_all,
-        lambda c: c.data and c.data.startswith("all_channels") 
-    )
-
-    router.callback_query.register(
-        next_page,
-        lambda c: c.data and c.data.startswith("keyingi_")
-    )
-    router.callback_query.register(
-        prev_page,
-        lambda c: c.data and c.data.startswith("oldingi_")
-    )
-
-    router.callback_query.register(
-        users_post,
-        lambda c: c.data and c.data.startswith("post_users") 
-    )
-    router.callback_query.register(
-        chanels_post,
-        lambda c: c.data and c.data.startswith("post_channels") 
-    )

@@ -12,22 +12,24 @@
     <!-- Token va Withdrawal tugmachalari -->
     <div class="tab-buttons">
         <a href="{% url 'style' %}" class="active">Yulduzlar</a>
-        <a href="#" onclick="showNotification()">Reyting</a>
+        <a href="{% url 'style2' %}" >Reyting</a>
     </div>
 
     <!-- Statistik ma'lumot -->
     <div class="stats">
-        {% if ball %}
+        {% if ball or test %}
         <p><span>You Tube</span><span>⭐️{{ball.youtube_ball}}</span></p>
         <p><span>Telegram</span><span>⭐️{{ball.telegram_ball}}</span></p>
         <p><span>Instagram</span><span>⭐️{{ball.instagram_ball}}</span></p>
         <p><span>Do'stlar</span><span>⭐️{{ball.friends_ball}}</span></p>
+        <p><span>Test ball</span><span>⭐️{{test.score}}</span></p>
         <p><span>Jami:</span><span>⭐️{{ball.all_ball}}</span></p>
         {% else %}
         <p><span>You Tube</span><span>⭐️ 0</span></p>
         <p><span>Telegram</span><span>⭐️ 0</span></p>
         <p><span>Instagram</span><span>⭐️ 0</span></p>
         <p><span>Do'stlar</span><span>⭐️ 0</span></p>
+        <p><span>Test ball</span><span>⭐️ 0</span></p>
         <p><span>Jami:</span><span>⭐️ 0</span></p>
         {% endif %}
     </div>

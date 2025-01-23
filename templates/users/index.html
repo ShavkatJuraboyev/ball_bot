@@ -3,9 +3,9 @@
 {% block content %}
 <!-- Profil ma'lumotlari -->
 <div class="profile-info"> 
-    <img src="{% static 'images/2018-11-30-03-main.png' %}" alt="Profil">
+    <img src="{{ user.get_user_image_profile }}" alt="{{user.first_name}}">
     <div>
-        <div class="username" id="user-info"></div>
+        <div class="username" id="user-info">{{user.first_name}} {{user.last_name}}</div>
         <div class="status">FIO</div>
     </div>
     <div class="profile-stats">
@@ -48,7 +48,7 @@
         </div>
     </div>
     <div>
-        <img src="{% static 'images/sovga.png' %}" class="character" alt="Hamster">
+        <img src="{{ user.get_user_image }}" class="character" alt="{{user.first_name}}">
         <div>⭐️ {{ball.all_ball}}</div>
     </div>
 </div>

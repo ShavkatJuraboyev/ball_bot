@@ -17,6 +17,7 @@ import instaloader
 from handlers.database import get_telegram_links, get_or_create_ball, get_or_create_user, get_user_by_telegram_id, get_bad_words
 from utils.membership import check_user_in_channels
 from asyncio import sleep
+from aiohttp import ClientSession
 router = Router()
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -70,12 +71,15 @@ async def award_points_if_joined_all(user):
 
 @router.message(Command("start"))
 async def start_command(message: types.Message, state: FSMContext, bot: Bot):
+    user_id = message.from_user.id  # Foydalanuvchi ID
+    await state.update_data(user_id=user_id)
+    web_app_url = f"https://9edf-195-158-8-30.ngrok-free.app"
     # if message.chat.type == "private":
     user_data = {
-        'telegram_id': message.from_user.id,
+        'telegram_id': user_id,
         'first_name': message.from_user.first_name or ' ',
         'last_name': message.from_user.last_name or ' ',
-        'username_link': message.from_user.username or ' ',
+        'username_link': message.from_user.username or ' '
     }
 
     # Taklif kodini olish (start komandasidan keyingi parametr)
@@ -84,6 +88,31 @@ async def start_command(message: types.Message, state: FSMContext, bot: Bot):
 
     # Foydalanuvchini yaratish yoki topish
     user, created = await get_or_create_user(user_data)
+
+    # Foydalanuvchining profil rasmlarini olish
+    user_photos = await bot.get_user_profile_photos(user_id=user_id)
+    if user_photos.total_count > 0:
+        # Birinchi rasmning birinchi variantini olish
+        file_id = user_photos.photos[0][0].file_id
+        file = await bot.get_file(file_id)
+        file_url = f"https://api.telegram.org/file/bot{settings.TELEGRAM_BOT_TOKEN}/{file.file_path}"
+
+        # Rasmni yuklab olish va saqlash
+        async with ClientSession() as session:
+            async with session.get(file_url) as response:
+                if response.status == 200:
+                    file_name = f"profile_{user_id}.jpg"
+                    file_path = os.path.join(settings.MEDIA_ROOT, "users/image/", file_name)
+
+                    with open(file_path, "wb") as f:
+                        f.write(await response.read())
+
+                    @sync_to_async
+                    def save_profile_image():
+                        user.profile_img = f"users/image/{file_name}"
+                        user.save()
+
+                    await save_profile_image()
 
     # Foydalanuvchi hali botga birinchi marta kirgan bo'lsa va taklif kodi berilgan bo'lsa
     if created and referral_code and not user.referred_by:
@@ -108,7 +137,7 @@ async def start_command(message: types.Message, state: FSMContext, bot: Bot):
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text="Video yuklash ⏳", callback_data="video_download")],
-                [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://ca19-195-158-8-30.ngrok-free.app"))]
+                [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url=web_app_url))]
             ]
         )
         await message.answer("Endi siz ilova orqali sovg'alar yutub olishingiz mumkin. \nVieo yuklashda siz Youtube va Instagram dan videolarni qiyinchiliksiz yuklash imkoniyati bor:", reply_markup=keyboard)
@@ -128,7 +157,8 @@ async def start_command(message: types.Message, state: FSMContext, bot: Bot):
 async def handle_contact(message: types.Message, state: FSMContext):
     telegram_id = message.contact.user_id
     user = await get_user_by_telegram_id(telegram_id)
-
+    await state.update_data(user_id=telegram_id)
+    web_app_url = f"https://9edf-195-158-8-30.ngrok-free.app?user_id={telegram_id}"
     if user:
         user.phone_number = message.contact.phone_number
         await sync_to_async(user.save)()
@@ -138,7 +168,7 @@ async def handle_contact(message: types.Message, state: FSMContext):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="Video yuklash ⏳", callback_data="video_download")],
-            [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://ca19-195-158-8-30.ngrok-free.app"))]
+            [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url=web_app_url))]
         ]
     )
     await message.answer("Endi siz ilova orqali sovg'alar yutub olishingiz mumkin. \nVieo yuklashda siz Youtube va Instagram dan videolarni qiyinchiliksiz yuklash imkoniyati bor", reply_markup=keyboard)
@@ -147,6 +177,7 @@ async def handle_contact(message: types.Message, state: FSMContext):
 # Video yuklash tugmasi uchun handler
 @router.callback_query(lambda c: c.data and c.data.startswith("video_download"))
 async def video_download_handler(callback: CallbackQuery):
+    
     if callback.message.chat.type == "private":
         await callback.message.edit_text("Videoning platformasini tanlang:")
         platform_keyboard = InlineKeyboardMarkup(
@@ -161,12 +192,15 @@ async def video_download_handler(callback: CallbackQuery):
 
 
 @router.callback_query(lambda callback_query: callback_query.data == "go_back")
-async def go_back_handler(callback: CallbackQuery):
+async def go_back_handler(callback: CallbackQuery, state: FSMContext):
+    chat_id = callback.message.from_user.id
+    await state.update_data(user_id=chat_id)
+    web_app_url = f"https://9edf-195-158-8-30.ngrok-free.app?user_id={chat_id}"
     # Ortga tugmasi bosilganda foydalanuvchiga Web app tugmalari bilan qaytish
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="Video yuklash ⏳", callback_data="video_download")],
-            [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url="https://ca19-195-158-8-30.ngrok-free.app"))]
+            [InlineKeyboardButton(text="Ilovaga o'tish 🌐", web_app=WebAppInfo(url=web_app_url))]
         ]
     )
     await callback.message.edit_text("Quyidagi tugmalardan birini tanlang:", reply_markup=keyboard)

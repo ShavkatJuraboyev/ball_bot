@@ -1,20 +1,23 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from kiber_security.models import Users, Link, Ball, LinkVisit, Test, UserTest, UserAnswer, Answer, Question
+from kiber_security.models import Users, Link, Ball, LinkVisit, Test, UserTest, UserAnswer, Answer
 from django.views.decorators.csrf import csrf_exempt
 from urllib.parse import parse_qs
 import json
 from django.http import JsonResponse, HttpResponse
-from django.utils import timezone
+from django.db.models import Sum, Value
+
 
 def index(request):
     telegram_id = request.session.get('telegram_id')
-    ball = None
+    ball = 0
+    user = Users.objects.filter(telegram_id=telegram_id).first()
+    
     try:
         ball = Ball.objects.get(user__telegram_id=telegram_id)
     except Ball.DoesNotExist:
-        ball = None 
+        ball = 0 
         
-    context = {'ball':ball, 'segment': 'index',}
+    context = {'ball':ball, 'segment': 'index', 'user':user}
     return render(request, 'users/index.html', context)
 
 def get_referral_link(user):
@@ -35,8 +38,8 @@ def friends(request):
 
 def share(request): 
     telegram_id = request.session.get('telegram_id')
-    if telegram_id:
-        user = get_object_or_404(Users, telegram_id=telegram_id)
+    print(telegram_id)
+    user = Users.objects.get(telegram_id=telegram_id)
     youtube_links = Link.objects.filter(link_type='youtube')
     telegram_links = Link.objects.filter(link_type='telegram')
     instagram_links = Link.objects.filter(link_type='instagram')
@@ -52,8 +55,6 @@ def share(request):
 
 
 def add_link_ball(request, link_id, telegram_id):
-    print(telegram_id)
-    
     if telegram_id:
         try:
             # Foydalanuvchini bazadan olish
@@ -87,7 +88,7 @@ def add_link_ball(request, link_id, telegram_id):
             # Xatolik bo'lsa, konsolga chiqarish va foydalanuvchiga xabar berish
             print(f"Xatolik: {str(e)}")
             return HttpResponse(f"Xatolik yuz berdi: {str(e)}")
-    
+ 
     else:
         # Agar telegram_id bo'lmasa, xato javob yuboring
         return HttpResponse("Telegram ID topilmadi. Iltimos, tizimga kiring.")
@@ -95,18 +96,25 @@ def add_link_ball(request, link_id, telegram_id):
 
 def style(request):
     telegram_id = request.session.get('telegram_id')
-    
     ball = None
+    test = None
     # `telegram_id` mavjud bo'lsa, faqatgina unda `Ball` obyektini qidiramiz
     if telegram_id:
         ball = Ball.objects.filter(user__telegram_id=telegram_id).first()
+        test = UserTest.objects.filter(user__telegram_id=telegram_id).first()
 
-    context = {'ball': ball, 'segment': 'style',}
+    context = {'ball': ball, 'segment': 'style', 'test':test}
     return render(request, 'users/style.html', context)
 
 
 def style2(request):
-    return render(request, 'users/style2.html')
+    # Har bir foydalanuvchi uchun all_ball qiymatini olish, bo'lmasa 0 ko'rsatish
+    users_with_ball = Users.objects.annotate(all_ball=Sum('ball__all_ball', default=Value(0))).order_by('-all_ball')  # all_ball kamayish tartibida saralanadi
+
+    context = {
+        'users_with_ball': users_with_ball
+    }
+    return render(request, 'users/style2.html', context)
 
 
 @csrf_exempt
@@ -145,7 +153,6 @@ def verify_user(request):
                 return JsonResponse({"error": "user ma'lumotlari topilmadi"}, status=400)
         else:
             return JsonResponse({"error": "initData mavjud emas"}, status=400)
-
     return JsonResponse({"error": "Notog'ri so'rov"}, status=400)
 
 
@@ -163,8 +170,6 @@ def test_list(request):
     # Foydalanuvchi tugatgan testlardan ajratilgan testlar
     available_tests = tests.exclude(id__in=completed_tests)
     return render(request, 'users/test_list.html', {'tests': tests, 'completed_tests': completed_tests, 'ball':ball})
-
-
 
 
 def test_detail(request, test_id):
@@ -202,7 +207,6 @@ def test_detail(request, test_id):
         user_test.save()
         return redirect('test_result', test_id=test_id)
     return render(request, 'users/start.html', {'test': test, 'questions': questions, 'ball':ball})
-
 
 def test_result(request, test_id):
     telegram_id = request.session.get('telegram_id')

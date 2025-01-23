@@ -14,7 +14,7 @@ dp = Dispatcher(storage=MemoryStorage())
 
 async def main():
     # Handlerlarni ro'yxatga olish
-    register_user_handlers(dp, bot)
+    # register_user_handlers(dp, bot)
     register_admin_handlers(dp, bot)
     
 

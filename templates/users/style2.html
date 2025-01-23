@@ -4,7 +4,7 @@
     <!-- Markaziy kontent -->
     <div class="main-content">
         <img src="{% static 'images/security.png' %}" alt="logo">
-        <h2>Natijalar</h2>
+        <h2>Natijalar</h2> 
     </div>
 
     <!-- Token va Withdrawal tugmachalari -->
@@ -12,15 +12,19 @@
         <a href="{% url 'style' %}">Yulduzlar</a>
         <a href="{% url 'style' %}" class="active">Reyting</a>
     </div>
-
-  
-    <div class="stats">
-        <a href="#"><span>Direct claim</span><i class="fa-solid fa-chevron-right"></i></a>
-    </div>
-    <div class="stats">
-        <a href="#"><span>Direct claim</span><i class="fa-solid fa-chevron-right"></i></a>
-    </div>
-    <div class="stats">
-        <a href="#"><span>Direct claim</span><i class="fa-solid fa-chevron-right"></i></a>
+   
+    <div class="share-links">
+        {% for entry in users_with_ball %}
+        <a href="#" class="logo-share">
+            <img src="{% static 'images/person.png' %}" alt="friends">
+            <div>
+                <div class="friends">{{ entry.first_name }}</div>
+                <span class="olmas">⭐️</span> <span class="priz">{{ entry.all_ball|default:0 }}</span>
+            </div>
+            <div class="links" style="color: aliceblue;">
+                #{{ forloop.counter }}
+            </div>
+        </a>
+        {% endfor %}
     </div>
     {% endblock content %}
