@@ -9,6 +9,8 @@ from django.db.models import Sum, Value
 
 def index(request):
     telegram_id = request.session.get('telegram_id')
+    if not telegram_id:
+        return HttpResponse("Telegram botga /start buyrug'ini bosing va qayta urinib ko'ring.", status=400)
     ball = 0
     user = Users.objects.filter(telegram_id=telegram_id).first()
     
@@ -27,6 +29,8 @@ def get_referral_link(user):
 
 def friends(request):
     telegram_id = request.session.get('telegram_id')
+    if not telegram_id:
+        return HttpResponse("Telegram botga /start buyrug'ini bosing va qayta urinib ko'ring.", status=400)
     user = Users.objects.filter(telegram_id=telegram_id).first()
 
     referral_link = get_referral_link(user) if user else None 
@@ -36,10 +40,20 @@ def friends(request):
     context = {'referral_link': referral_link, 'referrals': referrals, 'referred_by': referred_by, 'segment': 'friends',}
     return render(request, 'users/friends.html', context)
 
+
+
 def share(request): 
     telegram_id = request.session.get('telegram_id')
-    print(telegram_id)
-    user = Users.objects.get(telegram_id=telegram_id)
+
+    # Telegram ID mavjudligini tekshirish
+    if not telegram_id:
+        return HttpResponse("Telegram botga /start buyrug'ini bosing va qayta urinib ko'ring.", status=400)
+
+    try:
+        user = Users.objects.get(telegram_id=telegram_id)
+    except Users.DoesNotExist:
+        return HttpResponse("Telegram botga /start buyrug'ini bosing va qayta urinib ko'ring.", status=400)
+
     youtube_links = Link.objects.filter(link_type='youtube')
     telegram_links = Link.objects.filter(link_type='telegram')
     instagram_links = Link.objects.filter(link_type='instagram')
@@ -52,6 +66,7 @@ def share(request):
         'segment': 'share',
     }
     return render(request, 'users/share.html', context)
+
 
 
 def add_link_ball(request, link_id, telegram_id):
@@ -96,6 +111,8 @@ def add_link_ball(request, link_id, telegram_id):
 
 def style(request):
     telegram_id = request.session.get('telegram_id')
+    if not telegram_id:
+        return HttpResponse("Telegram botga /start buyrug'ini bosing va qayta urinib ko'ring.", status=400)
     ball = None
     test = None
     # `telegram_id` mavjud bo'lsa, faqatgina unda `Ball` obyektini qidiramiz
@@ -158,6 +175,10 @@ def verify_user(request):
 
 def test_list(request):
     telegram_id = request.session.get('telegram_id')
+    # Telegram ID mavjudligini tekshirish
+    if not telegram_id:
+        return HttpResponse("Telegram botga /start buyrug'ini bosing va qayta urinib ko'ring.", status=400)
+
     ball = None
     try:
         ball = Ball.objects.get(user__telegram_id=telegram_id)
@@ -174,6 +195,8 @@ def test_list(request):
 
 def test_detail(request, test_id):
     telegram_id = request.session.get('telegram_id')
+    if not telegram_id:
+        return HttpResponse("Telegram botga /start buyrug'ini bosing va qayta urinib ko'ring.", status=400)
     ball = None
     try:
         ball = Ball.objects.get(user__telegram_id=telegram_id)
@@ -210,6 +233,8 @@ def test_detail(request, test_id):
 
 def test_result(request, test_id):
     telegram_id = request.session.get('telegram_id')
+    if not telegram_id:
+        return HttpResponse("Telegram botga /start buyrug'ini bosing va qayta urinib ko'ring.", status=400)
     ball = None
     try:
         ball = Ball.objects.get(user__telegram_id=telegram_id)
